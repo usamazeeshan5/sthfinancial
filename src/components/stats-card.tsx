@@ -15,26 +15,26 @@ export function StatsCard({
   trend?: { value: string; positive: boolean };
 }) {
   return (
-    <div className="bg-card rounded-2xl border border-border p-5">
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <p className="text-sm text-muted">{title}</p>
-          <p className="text-2xl font-semibold tracking-tight">{value}</p>
-          {subtitle && <p className="text-xs text-muted">{subtitle}</p>}
+    <div className="bg-card rounded-2xl border border-border p-3.5 sm:p-5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1 sm:space-y-2 min-w-0">
+          <p className="text-xs sm:text-sm text-muted">{title}</p>
+          <p className="text-lg sm:text-2xl font-semibold tracking-tight truncate">{value}</p>
+          {subtitle && <p className="text-[10px] sm:text-xs text-muted truncate">{subtitle}</p>}
           {trend && (
             <p
               className={cn(
-                "text-xs font-medium",
+                "text-[10px] sm:text-xs font-medium",
                 trend.positive ? "text-success" : "text-danger"
               )}
             >
               {trend.positive ? "+" : ""}
-              {trend.value} vs last week
+              {trend.value} <span className="hidden sm:inline">vs last week</span>
             </p>
           )}
         </div>
-        <div className="p-2.5 rounded-xl bg-background">
-          <Icon className="w-5 h-5 text-muted" />
+        <div className="p-2 sm:p-2.5 rounded-xl bg-background shrink-0">
+          <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-muted" />
         </div>
       </div>
     </div>

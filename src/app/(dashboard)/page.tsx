@@ -31,7 +31,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         <StatsCard
           title="Total Tips"
           value={formatCurrency(stats.totalTips)}
@@ -64,50 +64,51 @@ export default function DashboardPage() {
 
       {/* Recent Transactions */}
       <div className="bg-card rounded-2xl border border-border">
-        <div className="px-5 py-4 border-b border-border">
+        <div className="px-4 sm:px-5 py-4 border-b border-border">
           <h2 className="text-sm font-medium">Recent Transactions</h2>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Desktop table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">
-                  Fee
-                </th>
-                <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">
-                  Date
-                </th>
+                <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Customer</th>
+                <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Amount</th>
+                <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Fee</th>
+                <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Status</th>
+                <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {recentTransactions.map((txn) => (
                 <tr key={txn.id} className="hover:bg-background/50">
-                  <td className="px-5 py-3 font-medium">
-                    {txn.customerName}
-                  </td>
+                  <td className="px-5 py-3 font-medium">{txn.customerName}</td>
                   <td className="px-5 py-3">{formatCurrency(txn.amount)}</td>
-                  <td className="px-5 py-3 text-muted">
-                    {formatCurrency(txn.fee)}
-                  </td>
-                  <td className="px-5 py-3">
-                    <StatusBadge status={txn.status} />
-                  </td>
-                  <td className="px-5 py-3 text-muted">
-                    {formatDateTime(txn.createdAt)}
-                  </td>
+                  <td className="px-5 py-3 text-muted">{formatCurrency(txn.fee)}</td>
+                  <td className="px-5 py-3"><StatusBadge status={txn.status} /></td>
+                  <td className="px-5 py-3 text-muted">{formatDateTime(txn.createdAt)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden divide-y divide-border">
+          {recentTransactions.map((txn) => (
+            <div key={txn.id} className="px-4 py-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-sm">{txn.customerName}</span>
+                <StatusBadge status={txn.status} />
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted">Tip: {formatCurrency(txn.amount)}</span>
+                <span className="text-muted">Fee: {formatCurrency(txn.fee)}</span>
+              </div>
+              <p className="text-xs text-muted">{formatDateTime(txn.createdAt)}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
