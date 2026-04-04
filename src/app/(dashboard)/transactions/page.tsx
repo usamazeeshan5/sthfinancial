@@ -47,7 +47,7 @@ export default function TransactionsPage() {
             className="w-full sm:max-w-sm pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
           />
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
           {statusOptions.map((status) => (
             <button
               key={status}

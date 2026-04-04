@@ -43,7 +43,7 @@ export default function PayoutsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-2 overflow-x-auto">
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
         {statusOptions.map((status) => (
           <button
             key={status}
