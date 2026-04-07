@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   AreaChart,
   Area,
@@ -9,10 +10,17 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { getChartData } from "@/lib/mock-data";
 
 export function RevenueChart() {
-  const chartData = getChartData();
+  const [chartData, setChartData] = useState<
+    Array<{ date: string; tips: number; fees: number }>
+  >([]);
+
+  useEffect(() => {
+    fetch("/api/dashboard")
+      .then((r) => r.json())
+      .then((data) => setChartData(data.chartData || []));
+  }, []);
 
   return (
     <div className="bg-card rounded-2xl border border-border p-5">

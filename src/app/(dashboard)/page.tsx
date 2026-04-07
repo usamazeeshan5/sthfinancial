@@ -1,10 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { DollarSign, Users, ArrowLeftRight, Wallet } from "lucide-react";
 import { StatsCard } from "@/components/stats-card";
 import { StatusBadge } from "@/components/status-badge";
-import { getStats, transactions } from "@/lib/mock-data";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 const RevenueChart = dynamic(
@@ -17,58 +17,69 @@ const RevenueChart = dynamic(
   }
 );
 
+type DashboardData = {
+  stats: {
+    totalTips: number;
+    totalFees: number;
+    totalTransactions: number;
+    activeCustomers: number;
+    depositedAmount: number;
+    pendingPayouts: number;
+  };
+  recentTransactions: Array<{
+    _id: string;
+    customerName: string;
+    amount: number;
+    fee: number;
+    status: string;
+    createdAt: string;
+  }>;
+};
+
 export default function DashboardPage() {
-  const stats = getStats();
-  const recentTransactions = transactions.slice(0, 8);
+  const [data, setData] = useState<DashboardData | null>(null);
+
+  useEffect(() => {
+    fetch("/api/dashboard")
+      .then((r) => r.json())
+      .then(setData);
+  }, []);
+
+  if (!data) {
+    return (
+      <div className="space-y-6">
+        <div><h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1></div>
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 bg-card rounded-2xl border border-border animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const { stats, recentTransactions } = data;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted mt-1">
-          Overview of your payment activity
-        </p>
+        <p className="text-sm text-muted mt-1">Overview of your payment activity</p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-        <StatsCard
-          title="Total Tips"
-          value={formatCurrency(stats.totalTips)}
-          icon={DollarSign}
-          trend={{ value: "12.5%", positive: true }}
-        />
-        <StatsCard
-          title="Fees Collected"
-          value={formatCurrency(stats.totalFees)}
-          subtitle="Paid by tippers"
-          icon={Wallet}
-          trend={{ value: "8.2%", positive: true }}
-        />
-        <StatsCard
-          title="Transactions"
-          value={stats.totalTransactions.toString()}
-          icon={ArrowLeftRight}
-          trend={{ value: "15.3%", positive: true }}
-        />
-        <StatsCard
-          title="Active Customers"
-          value={stats.activeCustomers.toString()}
-          subtitle={`${formatCurrency(stats.pendingPayouts)} pending`}
-          icon={Users}
-        />
+        <StatsCard title="Total Tips" value={formatCurrency(stats.totalTips)} icon={DollarSign} trend={{ value: "12.5%", positive: true }} />
+        <StatsCard title="Fees Collected" value={formatCurrency(stats.totalFees)} subtitle="Paid by tippers" icon={Wallet} trend={{ value: "8.2%", positive: true }} />
+        <StatsCard title="Transactions" value={stats.totalTransactions.toString()} icon={ArrowLeftRight} trend={{ value: "15.3%", positive: true }} />
+        <StatsCard title="Active Customers" value={stats.activeCustomers.toString()} subtitle={`${formatCurrency(stats.pendingPayouts)} pending`} icon={Users} />
       </div>
 
-      {/* Chart */}
       <RevenueChart />
 
-      {/* Recent Transactions */}
       <div className="bg-card rounded-2xl border border-border">
         <div className="px-4 sm:px-5 py-4 border-b border-border">
           <h2 className="text-sm font-medium">Recent Transactions</h2>
         </div>
-
-        {/* Desktop table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -82,7 +93,7 @@ export default function DashboardPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {recentTransactions.map((txn) => (
-                <tr key={txn.id} className="hover:bg-background/50">
+                <tr key={txn._id} className="hover:bg-background/50">
                   <td className="px-5 py-3 font-medium">{txn.customerName}</td>
                   <td className="px-5 py-3">{formatCurrency(txn.amount)}</td>
                   <td className="px-5 py-3 text-muted">{formatCurrency(txn.fee)}</td>
@@ -93,11 +104,9 @@ export default function DashboardPage() {
             </tbody>
           </table>
         </div>
-
-        {/* Mobile cards */}
         <div className="md:hidden divide-y divide-border">
           {recentTransactions.map((txn) => (
-            <div key={txn.id} className="px-4 py-3 space-y-2">
+            <div key={txn._id} className="px-4 py-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-sm">{txn.customerName}</span>
                 <StatusBadge status={txn.status} />
