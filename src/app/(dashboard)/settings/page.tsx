@@ -5,7 +5,7 @@ import { Key, User, Bell } from "lucide-react";
 
 export default function SettingsPage() {
   const [name, setName] = useState("Admin");
-  const [email, setEmail] = useState("admin@sthfinancial.com");
+  const [email, setEmail] = useState("admin@lovetap.me");
   const [apiKey, setApiKey] = useState("lq_live_••••••••••••••••");
   const [notifications, setNotifications] = useState({
     failedTransactions: true,

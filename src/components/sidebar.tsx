@@ -57,7 +57,7 @@ export function Sidebar({
               <CreditCard className="w-4 h-4 text-primary-foreground" />
             </div>
             <span className="text-lg font-semibold tracking-tight">
-              SthFinancial
+              lovetap.me
             </span>
           </Link>
           <button
@@ -102,7 +102,7 @@ export function Sidebar({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">Admin</p>
-              <p className="text-xs text-muted truncate">admin@sthfinancial.com</p>
+              <p className="text-xs text-muted truncate">admin@lovetap.me</p>
             </div>
           </div>
         </div>

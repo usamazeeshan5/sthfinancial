@@ -23,7 +23,7 @@ export async function POST() {
   // Seed admin user
   await AdminUser.create({
     name: "Admin",
-    email: "admin@sthfinancial.com",
+    email: "admin@lovetap.me",
     password: adminPassword,
   });
 

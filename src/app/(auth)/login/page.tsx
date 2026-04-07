@@ -40,7 +40,7 @@ export default function LoginPage() {
           <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
             <CreditCard className="w-6 h-6 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">SthFinancial</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">lovetap.me</h1>
           <p className="text-sm text-muted mt-1">
             Sign in to your admin dashboard
           </p>
@@ -56,7 +56,7 @@ export default function LoginPage() {
                 setEmail(e.target.value);
                 setError("");
               }}
-              placeholder="admin@sthfinancial.com"
+              placeholder="admin@lovetap.me"
               className="w-full px-4 py-2.5 bg-card border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
               required
             />
@@ -105,7 +105,7 @@ export default function LoginPage() {
           </button>
 
           <p className="text-xs text-center text-muted">
-            Demo: admin@sthfinancial.com / admin123
+            Demo: admin@lovetap.me / admin123
           </p>
         </form>
       </div>
