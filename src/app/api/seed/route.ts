@@ -29,14 +29,14 @@ export async function POST() {
 
   // Seed customers
   const customerData = [
-    { name: "Marcus Johnson", email: "marcus@email.com", phone: "+1 (555) 123-4567", bankAccountStatus: "connected", active: true },
-    { name: "Sarah Williams", email: "sarah@email.com", phone: "+1 (555) 234-5678", bankAccountStatus: "connected", active: true },
-    { name: "David Chen", email: "david@email.com", phone: "+1 (555) 345-6789", bankAccountStatus: "pending", active: true },
-    { name: "Emily Rodriguez", email: "emily@email.com", phone: "+1 (555) 456-7890", bankAccountStatus: "connected", active: true },
+    { name: "Marcus Johnson", email: "marcus@email.com", phone: "+1 (555) 123-4567", bankAccountStatus: "disconnected", active: true },
+    { name: "Sarah Williams", email: "sarah@email.com", phone: "+1 (555) 234-5678", bankAccountStatus: "disconnected", active: true },
+    { name: "David Chen", email: "david@email.com", phone: "+1 (555) 345-6789", bankAccountStatus: "disconnected", active: true },
+    { name: "Emily Rodriguez", email: "emily@email.com", phone: "+1 (555) 456-7890", bankAccountStatus: "disconnected", active: true },
     { name: "James Thompson", email: "james@email.com", phone: "+1 (555) 567-8901", bankAccountStatus: "disconnected", active: false },
-    { name: "Olivia Martinez", email: "olivia@email.com", phone: "+1 (555) 678-9012", bankAccountStatus: "connected", active: true },
-    { name: "Daniel Kim", email: "daniel@email.com", phone: "+1 (555) 789-0123", bankAccountStatus: "connected", active: true },
-    { name: "Sofia Patel", email: "sofia@email.com", phone: "+1 (555) 890-1234", bankAccountStatus: "pending", active: true },
+    { name: "Olivia Martinez", email: "olivia@email.com", phone: "+1 (555) 678-9012", bankAccountStatus: "disconnected", active: true },
+    { name: "Daniel Kim", email: "daniel@email.com", phone: "+1 (555) 789-0123", bankAccountStatus: "disconnected", active: true },
+    { name: "Sofia Patel", email: "sofia@email.com", phone: "+1 (555) 890-1234", bankAccountStatus: "disconnected", active: true },
   ];
 
   const customers = await Customer.insertMany(

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Key, User, Bell } from "lucide-react";
+import { User, Bell } from "lucide-react";
 
 export default function SettingsPage() {
   const [name, setName] = useState("Admin");
   const [email, setEmail] = useState("admin@lovetap.me");
-  const [apiKey, setApiKey] = useState("lq_live_••••••••••••••••");
+
   const [notifications, setNotifications] = useState({
     failedTransactions: true,
     failedPayouts: true,
@@ -62,32 +62,6 @@ export default function SettingsPage() {
         <button className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
           Save Profile
         </button>
-      </div>
-
-      {/* API Key */}
-      <div className="bg-card rounded-2xl border border-border p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <Key className="w-4 h-4 text-muted" />
-          <h2 className="text-sm font-medium">Luqra API</h2>
-        </div>
-
-        <div>
-          <label className="block text-sm text-muted mb-1.5">API Key</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="flex-1 px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-            />
-            <button className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium text-muted hover:text-foreground transition-colors">
-              Reveal
-            </button>
-          </div>
-          <p className="text-xs text-muted mt-2">
-            Your Luqra API key is used to process payments. Keep it secret.
-          </p>
-        </div>
       </div>
 
       {/* Notifications */}

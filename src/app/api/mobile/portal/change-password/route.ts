@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/db";
 import Customer from "@/lib/models/Customer";
-import { verifyToken } from "@/lib/jwt";
+import { verifyToken, signToken } from "@/lib/jwt";
 
 export async function POST(req: NextRequest) {
   await connectDB();
@@ -40,5 +40,12 @@ export async function POST(req: NextRequest) {
   customer.password = await bcrypt.hash(newPassword, 12);
   await customer.save();
 
-  return NextResponse.json({ success: true });
+  // Issue a fresh token so the session stays valid
+  const token = signToken({
+    id: customer._id.toString(),
+    email: customer.email,
+    name: customer.name,
+  });
+
+  return NextResponse.json({ success: true, token });
 }
