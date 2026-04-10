@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { connectDB } from "@/lib/db";
 import Payout from "@/lib/models/Payout";
 import Customer from "@/lib/models/Customer";
+import { markTransactionsDeposited } from "@/lib/markTransactionsDeposited";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -60,6 +61,16 @@ export async function POST(
   payout.stripeTransferId = transfer.id;
   payout.completedAt = new Date();
   await payout.save();
+
+  // Mark customer's processed transactions as deposited (FIFO)
+  try {
+    await markTransactionsDeposited(
+      payout.customerId.toString(),
+      payout.amount
+    );
+  } catch (err: any) {
+    console.error("Failed to mark transactions as deposited:", err.message);
+  }
 
   return NextResponse.json(payout);
 }
