@@ -1,23 +1,17 @@
-"use client";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { DashboardShell } from "./dashboard-shell";
 
-import { useState } from "react";
-import { Sidebar } from "@/components/sidebar";
-import { Header } from "@/components/header";
-
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const session = await auth();
 
-  return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
-      </div>
-    </div>
-  );
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  return <DashboardShell>{children}</DashboardShell>;
 }

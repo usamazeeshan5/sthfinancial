@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -13,6 +14,7 @@ import {
   Percent,
   Nfc,
   X,
+  LogOut,
 } from "lucide-react";
 
 const navItems = [
@@ -33,6 +35,15 @@ export function Sidebar({
   onClose: () => void;
 }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+
+  const userName = session?.user?.name || "Admin";
+  const userEmail = session?.user?.email || "admin@lovetap.me";
+  const userInitial = userName.charAt(0).toUpperCase();
+
+  const handleLogout = () => {
+    signOut({ callbackUrl: "/login" });
+  };
 
   return (
     <>
@@ -94,17 +105,24 @@ export function Sidebar({
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="px-4 py-4 border-t border-border">
+        {/* Footer with user info + logout */}
+        <div className="px-4 py-4 border-t border-border space-y-3">
           <div className="flex items-center gap-3 px-2">
             <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-sm font-semibold text-accent">
-              A
+              {userInitial}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">Admin</p>
-              <p className="text-xs text-muted truncate">admin@lovetap.me</p>
+              <p className="text-sm font-medium truncate">{userName}</p>
+              <p className="text-xs text-muted truncate">{userEmail}</p>
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-5 py-2 rounded-lg text-sm font-medium text-danger hover:bg-danger-light transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
         </div>
       </aside>
     </>

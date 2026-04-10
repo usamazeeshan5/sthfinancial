@@ -7,7 +7,8 @@ export interface ITransaction extends Document {
   fee: number;
   totalCharged: number;
   status: "pending" | "processed" | "deposited" | "failed";
-  luqraRefId: string;
+  luqraRefId?: string;
+  stripePaymentIntentId?: string;
   createdAt: Date;
 }
 
@@ -27,7 +28,8 @@ const TransactionSchema = new Schema<ITransaction>(
       enum: ["pending", "processed", "deposited", "failed"],
       default: "pending",
     },
-    luqraRefId: { type: String, required: true, unique: true },
+    luqraRefId: { type: String, unique: true, sparse: true },
+    stripePaymentIntentId: { type: String, unique: true, sparse: true },
   },
   { timestamps: true }
 );
