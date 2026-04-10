@@ -67,27 +67,44 @@ export async function POST() {
   );
 
   // Seed transactions
+  // Available balance = processed/deposited transactions - scheduled/completed payouts
+  // Marcus:  $15+$10+$8+$5+$19+$25+$40 = $122, payouts: $57 → balance: $65
+  // Sarah:   $25+$20+$16+$30 = $91,          payouts: $41 → balance: $50
+  // David:   $45+$35+$15 = $95,               payouts: $0 (failed only) → balance: $95
+  // Emily:   $50+$30+$28+$22+$18 = $148,      payouts: $108 → balance: $40
+  // Olivia:  $35+$18+$11+$25 = $89,           payouts: $64 → balance: $25
+  // Daniel:  $12+$22+$55+$20 = $109,          payouts: $89 → balance: $20
+  // Sofia:   $33+$27 = $60,                   payouts: $33 → balance: $27
   const txData = [
-    { customerName: "Marcus Johnson", amount: 15.00, fee: 0.89, totalCharged: 15.89, status: "deposited", luqraRefId: "LQ-2026-00001", createdAt: "2026-04-04T14:30:00" },
-    { customerName: "Sarah Williams", amount: 25.00, fee: 1.19, totalCharged: 26.19, status: "deposited", luqraRefId: "LQ-2026-00002", createdAt: "2026-04-04T13:15:00" },
-    { customerName: "Marcus Johnson", amount: 10.00, fee: 0.74, totalCharged: 10.74, status: "processed", luqraRefId: "LQ-2026-00003", createdAt: "2026-04-04T12:00:00" },
-    { customerName: "Emily Rodriguez", amount: 50.00, fee: 1.94, totalCharged: 51.94, status: "deposited", luqraRefId: "LQ-2026-00004", createdAt: "2026-04-04T11:45:00" },
-    { customerName: "David Chen", amount: 20.00, fee: 1.04, totalCharged: 21.04, status: "pending", luqraRefId: "LQ-2026-00005", createdAt: "2026-04-04T10:30:00" },
-    { customerName: "Olivia Martinez", amount: 35.00, fee: 1.49, totalCharged: 36.49, status: "deposited", luqraRefId: "LQ-2026-00006", createdAt: "2026-04-03T18:20:00" },
-    { customerName: "Daniel Kim", amount: 12.00, fee: 0.80, totalCharged: 12.80, status: "deposited", luqraRefId: "LQ-2026-00007", createdAt: "2026-04-03T16:00:00" },
-    { customerName: "Sarah Williams", amount: 40.00, fee: 1.64, totalCharged: 41.64, status: "failed", luqraRefId: "LQ-2026-00008", createdAt: "2026-04-03T14:45:00" },
-    { customerName: "Marcus Johnson", amount: 8.00, fee: 0.68, totalCharged: 8.68, status: "deposited", luqraRefId: "LQ-2026-00009", createdAt: "2026-04-03T12:30:00" },
-    { customerName: "Emily Rodriguez", amount: 30.00, fee: 1.34, totalCharged: 31.34, status: "deposited", luqraRefId: "LQ-2026-00010", createdAt: "2026-04-03T10:15:00" },
-    { customerName: "Olivia Martinez", amount: 18.00, fee: 0.98, totalCharged: 18.98, status: "deposited", luqraRefId: "LQ-2026-00011", createdAt: "2026-04-02T17:00:00" },
-    { customerName: "Daniel Kim", amount: 22.00, fee: 1.10, totalCharged: 23.10, status: "processed", luqraRefId: "LQ-2026-00012", createdAt: "2026-04-02T15:30:00" },
-    { customerName: "Marcus Johnson", amount: 5.00, fee: 0.59, totalCharged: 5.59, status: "deposited", luqraRefId: "LQ-2026-00013", createdAt: "2026-04-02T13:00:00" },
-    { customerName: "David Chen", amount: 45.00, fee: 1.79, totalCharged: 46.79, status: "deposited", luqraRefId: "LQ-2026-00014", createdAt: "2026-04-02T11:45:00" },
-    { customerName: "Sarah Williams", amount: 16.00, fee: 0.92, totalCharged: 16.92, status: "deposited", luqraRefId: "LQ-2026-00015", createdAt: "2026-04-01T19:00:00" },
-    { customerName: "Emily Rodriguez", amount: 28.00, fee: 1.28, totalCharged: 29.28, status: "deposited", luqraRefId: "LQ-2026-00016", createdAt: "2026-04-01T16:30:00" },
-    { customerName: "Sofia Patel", amount: 33.00, fee: 1.43, totalCharged: 34.43, status: "pending", luqraRefId: "LQ-2026-00017", createdAt: "2026-04-01T14:15:00" },
-    { customerName: "Olivia Martinez", amount: 11.00, fee: 0.77, totalCharged: 11.77, status: "deposited", luqraRefId: "LQ-2026-00018", createdAt: "2026-04-01T12:00:00" },
-    { customerName: "Daniel Kim", amount: 55.00, fee: 2.09, totalCharged: 57.09, status: "deposited", luqraRefId: "LQ-2026-00019", createdAt: "2026-03-31T18:30:00" },
-    { customerName: "Marcus Johnson", amount: 19.00, fee: 1.01, totalCharged: 20.01, status: "deposited", luqraRefId: "LQ-2026-00020", createdAt: "2026-03-31T15:00:00" },
+    { customerName: "Marcus Johnson", amount: 15.00, fee: 0.89, totalCharged: 15.89, status: "deposited", createdAt: "2026-04-04T14:30:00" },
+    { customerName: "Sarah Williams", amount: 25.00, fee: 1.19, totalCharged: 26.19, status: "deposited", createdAt: "2026-04-04T13:15:00" },
+    { customerName: "Marcus Johnson", amount: 10.00, fee: 0.74, totalCharged: 10.74, status: "processed", createdAt: "2026-04-04T12:00:00" },
+    { customerName: "Emily Rodriguez", amount: 50.00, fee: 1.94, totalCharged: 51.94, status: "deposited", createdAt: "2026-04-04T11:45:00" },
+    { customerName: "David Chen", amount: 45.00, fee: 1.79, totalCharged: 46.79, status: "deposited", createdAt: "2026-04-04T10:30:00" },
+    { customerName: "Olivia Martinez", amount: 35.00, fee: 1.49, totalCharged: 36.49, status: "deposited", createdAt: "2026-04-03T18:20:00" },
+    { customerName: "Daniel Kim", amount: 12.00, fee: 0.80, totalCharged: 12.80, status: "deposited", createdAt: "2026-04-03T16:00:00" },
+    { customerName: "Sarah Williams", amount: 20.00, fee: 1.04, totalCharged: 21.04, status: "processed", createdAt: "2026-04-03T14:45:00" },
+    { customerName: "Marcus Johnson", amount: 8.00, fee: 0.68, totalCharged: 8.68, status: "deposited", createdAt: "2026-04-03T12:30:00" },
+    { customerName: "Emily Rodriguez", amount: 30.00, fee: 1.34, totalCharged: 31.34, status: "deposited", createdAt: "2026-04-03T10:15:00" },
+    { customerName: "Olivia Martinez", amount: 18.00, fee: 0.98, totalCharged: 18.98, status: "deposited", createdAt: "2026-04-02T17:00:00" },
+    { customerName: "Daniel Kim", amount: 22.00, fee: 1.10, totalCharged: 23.10, status: "processed", createdAt: "2026-04-02T15:30:00" },
+    { customerName: "Marcus Johnson", amount: 5.00, fee: 0.59, totalCharged: 5.59, status: "deposited", createdAt: "2026-04-02T13:00:00" },
+    { customerName: "David Chen", amount: 35.00, fee: 1.49, totalCharged: 36.49, status: "deposited", createdAt: "2026-04-02T11:45:00" },
+    { customerName: "Sarah Williams", amount: 16.00, fee: 0.92, totalCharged: 16.92, status: "deposited", createdAt: "2026-04-01T19:00:00" },
+    { customerName: "Emily Rodriguez", amount: 28.00, fee: 1.28, totalCharged: 29.28, status: "deposited", createdAt: "2026-04-01T16:30:00" },
+    { customerName: "Sofia Patel", amount: 33.00, fee: 1.43, totalCharged: 34.43, status: "deposited", createdAt: "2026-04-01T14:15:00" },
+    { customerName: "Olivia Martinez", amount: 11.00, fee: 0.77, totalCharged: 11.77, status: "deposited", createdAt: "2026-04-01T12:00:00" },
+    { customerName: "Daniel Kim", amount: 55.00, fee: 2.09, totalCharged: 57.09, status: "deposited", createdAt: "2026-03-31T18:30:00" },
+    { customerName: "Marcus Johnson", amount: 19.00, fee: 1.01, totalCharged: 20.01, status: "deposited", createdAt: "2026-03-31T15:00:00" },
+    { customerName: "Marcus Johnson", amount: 25.00, fee: 1.19, totalCharged: 26.19, status: "deposited", createdAt: "2026-04-06T09:00:00" },
+    { customerName: "Marcus Johnson", amount: 40.00, fee: 1.64, totalCharged: 41.64, status: "processed", createdAt: "2026-04-07T11:30:00" },
+    { customerName: "Sarah Williams", amount: 30.00, fee: 1.34, totalCharged: 31.34, status: "deposited", createdAt: "2026-04-06T14:00:00" },
+    { customerName: "Emily Rodriguez", amount: 22.00, fee: 1.10, totalCharged: 23.10, status: "processed", createdAt: "2026-04-06T16:00:00" },
+    { customerName: "Emily Rodriguez", amount: 18.00, fee: 0.98, totalCharged: 18.98, status: "deposited", createdAt: "2026-04-07T10:00:00" },
+    { customerName: "David Chen", amount: 15.00, fee: 0.89, totalCharged: 15.89, status: "processed", createdAt: "2026-04-06T12:00:00" },
+    { customerName: "Olivia Martinez", amount: 25.00, fee: 1.19, totalCharged: 26.19, status: "deposited", createdAt: "2026-04-07T09:30:00" },
+    { customerName: "Daniel Kim", amount: 20.00, fee: 1.04, totalCharged: 21.04, status: "deposited", createdAt: "2026-04-07T13:00:00" },
+    { customerName: "Sofia Patel", amount: 27.00, fee: 1.25, totalCharged: 28.25, status: "processed", createdAt: "2026-04-07T15:00:00" },
   ];
 
   await Transaction.insertMany(
@@ -98,15 +115,15 @@ export async function POST() {
     }))
   );
 
-  // Seed payouts
+  // Seed payouts (less than total transactions so customers have available balance)
   const payoutData = [
     { customerName: "Marcus Johnson", amount: 57.00, status: "completed", scheduledAt: "2026-04-04T00:00:00", completedAt: "2026-04-04T08:00:00" },
     { customerName: "Sarah Williams", amount: 41.00, status: "completed", scheduledAt: "2026-04-04T00:00:00", completedAt: "2026-04-04T08:15:00" },
     { customerName: "Emily Rodriguez", amount: 108.00, status: "completed", scheduledAt: "2026-04-04T00:00:00", completedAt: "2026-04-04T08:30:00" },
-    { customerName: "Olivia Martinez", amount: 64.00, status: "scheduled", scheduledAt: "2026-04-05T00:00:00", completedAt: null },
-    { customerName: "Daniel Kim", amount: 89.00, status: "scheduled", scheduledAt: "2026-04-05T00:00:00", completedAt: null },
+    { customerName: "Olivia Martinez", amount: 64.00, status: "completed", scheduledAt: "2026-04-03T00:00:00", completedAt: "2026-04-03T08:00:00" },
+    { customerName: "Daniel Kim", amount: 89.00, status: "completed", scheduledAt: "2026-04-03T00:00:00", completedAt: "2026-04-03T08:15:00" },
     { customerName: "David Chen", amount: 65.00, status: "failed", scheduledAt: "2026-04-03T00:00:00", completedAt: null },
-    { customerName: "Sofia Patel", amount: 33.00, status: "scheduled", scheduledAt: "2026-04-05T00:00:00", completedAt: null },
+    { customerName: "Sofia Patel", amount: 33.00, status: "completed", scheduledAt: "2026-04-04T00:00:00", completedAt: "2026-04-04T08:45:00" },
   ];
 
   await Payout.insertMany(

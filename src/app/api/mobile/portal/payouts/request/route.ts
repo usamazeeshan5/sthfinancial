@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { verifyToken } from "@/lib/jwt";
 import Customer from "@/lib/models/Customer";
@@ -95,15 +96,17 @@ export async function POST(req: NextRequest) {
 }
 
 async function calculateAvailableBalance(customerId: string): Promise<number> {
+  const objectId = new mongoose.Types.ObjectId(customerId);
+
   const [earningsResult, paidOutResult] = await Promise.all([
     // Total earnings from processed/deposited transactions
     Transaction.aggregate([
-      { $match: { customerId, status: { $in: ["processed", "deposited"] } } },
+      { $match: { customerId: objectId, status: { $in: ["processed", "deposited"] } } },
       { $group: { _id: null, sum: { $sum: "$amount" } } },
     ]),
     // Total already paid out or scheduled
     Payout.aggregate([
-      { $match: { customerId, status: { $in: ["scheduled", "completed"] } } },
+      { $match: { customerId: objectId, status: { $in: ["scheduled", "completed"] } } },
       { $group: { _id: null, sum: { $sum: "$amount" } } },
     ]),
   ]);
