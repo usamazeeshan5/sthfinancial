@@ -24,33 +24,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
 
-  let accountId = customer.stripeConnectedAccountId;
+  try {
+    let accountId = customer.stripeConnectedAccountId;
 
-  // Create a new Express Connected Account if one doesn't exist
-  if (!accountId) {
-    const account = await stripe.accounts.create({
-      type: "express",
-      email: customer.email,
-      metadata: { customerId: customer._id.toString() },
-      capabilities: {
-        transfers: { requested: true },
-      },
+    // Create a new Express Connected Account if one doesn't exist
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: "express",
+        email: customer.email,
+        metadata: { customerId: customer._id.toString() },
+        capabilities: {
+          transfers: { requested: true },
+        },
+      });
+      accountId = account.id;
+      customer.stripeConnectedAccountId = accountId;
+      customer.bankAccountStatus = "pending";
+      await customer.save();
+    }
+
+    // Generate an Account Link for Stripe-hosted onboarding
+    const accountLink = await stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: "https://sthfinancial.vercel.app/api/mobile/portal/stripe-connect/onboard?refresh=true",
+      return_url: "https://sthfinancial.vercel.app/api/mobile/portal/stripe-connect/onboard?success=true",
+      type: "account_onboarding",
     });
-    accountId = account.id;
-    customer.stripeConnectedAccountId = accountId;
-    customer.bankAccountStatus = "pending";
-    await customer.save();
+
+    return NextResponse.json({ url: accountLink.url });
+  } catch (err: any) {
+    const message = err?.message || "Failed to start Stripe onboarding";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  // Generate an Account Link for Stripe-hosted onboarding
-  const accountLink = await stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: "https://sthfinancial.vercel.app/api/mobile/portal/stripe-connect/onboard?refresh=true",
-    return_url: "https://sthfinancial.vercel.app/api/mobile/portal/stripe-connect/onboard?success=true",
-    type: "account_onboarding",
-  });
-
-  return NextResponse.json({ url: accountLink.url });
 }
 
 // Handle return/refresh redirects from Stripe onboarding
