@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { merchantAccounts } from "@/lib/luqra";
 import { connectDB } from "@/lib/db";
 import Customer from "@/lib/models/Customer";
 import { verifyToken } from "@/lib/jwt";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function GET(req: NextRequest) {
   await connectDB();
@@ -24,7 +22,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
 
-  if (!customer.stripeConnectedAccountId) {
+  if (!customer.luqraMerchantAccountId) {
     return NextResponse.json({
       status: "disconnected",
       chargesEnabled: false,
@@ -32,13 +30,13 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Check the account status on Stripe
-  const account = await stripe.accounts.retrieve(customer.stripeConnectedAccountId);
+  // Check the account status on Luqra
+  const account = await merchantAccounts.retrieve(customer.luqraMerchantAccountId);
 
   const chargesEnabled = account.charges_enabled ?? false;
   const detailsSubmitted = account.details_submitted ?? false;
 
-  // Update local status based on Stripe's response
+  // Update local status based on Luqra's response
   if (chargesEnabled) {
     customer.bankAccountStatus = "connected";
   } else if (detailsSubmitted) {

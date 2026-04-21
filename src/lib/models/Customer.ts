@@ -6,7 +6,7 @@ export interface ICustomer extends Document {
   phone: string;
   password: string;
   bankAccountStatus: "connected" | "pending" | "disconnected";
-  stripeConnectedAccountId?: string;
+  luqraMerchantAccountId?: string;
   active: boolean;
   createdAt: Date;
 }
@@ -22,7 +22,7 @@ const CustomerSchema = new Schema<ICustomer>(
       enum: ["connected", "pending", "disconnected"],
       default: "pending",
     },
-    stripeConnectedAccountId: { type: String, default: null },
+    luqraMerchantAccountId: { type: String, default: null },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }

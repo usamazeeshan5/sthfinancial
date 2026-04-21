@@ -44,16 +44,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
 
-  if (!customer.stripeConnectedAccountId) {
+  if (!customer.luqraMerchantAccountId) {
     return NextResponse.json(
-      { error: "Please connect your Stripe account before requesting a payout" },
+      { error: "Please connect your Luqra account before requesting a payout" },
       { status: 400 }
     );
   }
 
   if (customer.bankAccountStatus !== "connected") {
     return NextResponse.json(
-      { error: "Please complete Stripe onboarding before requesting a payout" },
+      { error: "Please complete Luqra onboarding before requesting a payout" },
       { status: 400 }
     );
   }

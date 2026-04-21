@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { CreditCard, Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,10 +38,14 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
-            <CreditCard className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">lovetap.me</h1>
+          <Image
+            src="/lovetap-logo.jpeg"
+            alt="LoveTap.Me"
+            width={48}
+            height={48}
+            className="rounded-2xl mx-auto mb-4"
+          />
+          <h1 className="text-2xl font-semibold tracking-tight">LoveTap.Me</h1>
           <p className="text-sm text-muted mt-1">
             Sign in to your admin dashboard
           </p>

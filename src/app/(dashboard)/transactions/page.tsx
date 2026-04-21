@@ -6,10 +6,10 @@ import { StatusBadge } from "@/components/status-badge";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 const statusOptions = ["all", "pending", "processed", "deposited", "failed"];
-type Transaction = { _id: string; customerName: string; amount: number; fee: number; totalCharged: number; status: string; luqraRefId?: string; stripePaymentIntentId?: string; createdAt: string };
+type Transaction = { _id: string; customerName: string; amount: number; fee: number; totalCharged: number; status: string; luqraRefId?: string; luqraPaymentIntentId?: string; createdAt: string };
 
 function getRefId(t: Transaction) {
-  return t.stripePaymentIntentId || t.luqraRefId || t._id;
+  return t.luqraRefId || t.luqraPaymentIntentId || t._id;
 }
 
 export default function TransactionsPage() {

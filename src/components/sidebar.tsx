@@ -4,12 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 import {
   LayoutDashboard,
   Users,
   ArrowLeftRight,
   Wallet,
-  CreditCard,
   Settings,
   Percent,
   Nfc,
@@ -64,11 +64,15 @@ export function Sidebar({
         {/* Logo */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <CreditCard className="w-4 h-4 text-primary-foreground" />
-            </div>
+            <Image
+              src="/lovetap-logo.jpeg"
+              alt="LoveTap.Me"
+              width={32}
+              height={32}
+              className="rounded-lg"
+            />
             <span className="text-lg font-semibold tracking-tight">
-              lovetap.me
+              LoveTap.Me
             </span>
           </Link>
           <button

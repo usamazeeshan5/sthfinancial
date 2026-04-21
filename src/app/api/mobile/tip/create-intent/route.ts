@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { paymentIntents } from "@/lib/luqra";
 import { connectDB } from "@/lib/db";
 import NfcChip from "@/lib/models/NfcChip";
 import FeeConfig from "@/lib/models/FeeConfig";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: NextRequest) {
   await connectDB();
@@ -39,8 +37,8 @@ export async function POST(req: NextRequest) {
     ) / 100;
   const totalCharged = Math.round((amount + fee) * 100) / 100;
 
-  // Create Stripe PaymentIntent (amount in cents)
-  const paymentIntent = await stripe.paymentIntents.create({
+  // Create Luqra PaymentIntent (amount in cents)
+  const paymentIntent = await paymentIntents.create({
     amount: Math.round(totalCharged * 100),
     currency: "usd",
     automatic_payment_methods: { enabled: true },

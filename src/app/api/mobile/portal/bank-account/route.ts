@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const customer = await Customer.findById(payload.id).select("bankAccountStatus stripeConnectedAccountId");
+  const customer = await Customer.findById(payload.id).select("bankAccountStatus luqraMerchantAccountId");
   if (!customer) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
@@ -24,6 +24,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     bankAccountStatus: customer.bankAccountStatus,
     hasBankAccount: customer.bankAccountStatus === "connected",
-    hasStripeConnect: !!customer.stripeConnectedAccountId,
+    hasLuqraConnect: !!customer.luqraMerchantAccountId,
   });
 }

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { paymentIntents } from "@/lib/luqra";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/lib/models/Transaction";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: NextRequest) {
   await connectDB();
@@ -18,8 +16,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Verify the payment succeeded on Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    // Verify the payment succeeded on Luqra
+    const paymentIntent = await paymentIntents.retrieve(paymentIntentId);
 
     if (paymentIntent.status !== "succeeded") {
       return NextResponse.json(
@@ -29,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Prevent duplicate transaction records
-    const existing = await Transaction.findOne({ stripePaymentIntentId: paymentIntentId });
+    const existing = await Transaction.findOne({ luqraPaymentIntentId: paymentIntentId });
     if (existing) {
       return NextResponse.json({
         success: true,
@@ -55,7 +53,7 @@ export async function POST(req: NextRequest) {
       fee: feeAmount,
       totalCharged,
       status: "processed",
-      stripePaymentIntentId: paymentIntentId,
+      luqraPaymentIntentId: paymentIntentId,
     });
 
     return NextResponse.json({
@@ -66,8 +64,8 @@ export async function POST(req: NextRequest) {
       totalCharged,
       customerName: customerName || "",
     });
-  } catch (err: any) {
-    const message = err?.message || "Failed to confirm payment";
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to confirm payment";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,29 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { webhooks, LuqraWebhookEvent } from "@/lib/luqra";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/lib/models/Transaction";
 import Payout from "@/lib/models/Payout";
 import { markTransactionsDeposited } from "@/lib/markTransactionsDeposited";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const webhookSecret = process.env.LUQRA_WEBHOOK_SECRET!;
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const signature = req.headers.get("stripe-signature");
+  const signature = req.headers.get("luqra-signature");
 
   if (!signature) {
     return NextResponse.json(
-      { error: "Missing stripe-signature header" },
+      { error: "Missing luqra-signature header" },
       { status: 400 }
     );
   }
 
-  let event: Stripe.Event;
+  let event: LuqraWebhookEvent;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-  } catch (err: any) {
-    console.error("Webhook signature verification failed:", err.message);
+    event = webhooks.constructEvent(body, signature, webhookSecret);
+  } catch (err: unknown) {
+    console.error("Webhook signature verification failed:", err instanceof Error ? err.message : err);
     return NextResponse.json(
       { error: "Webhook signature verification failed" },
       { status: 400 }
@@ -33,6 +32,7 @@ export async function POST(req: NextRequest) {
   await connectDB();
 
   try {
+    // TODO: Confirm actual Luqra webhook event type names when API docs are available
     switch (event.type) {
       case "payment_intent.succeeded":
         await handlePaymentIntentSucceeded(event);
@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
       default:
         break;
     }
-  } catch (err: any) {
-    console.error(`Error handling webhook event ${event.type}:`, err.message);
+  } catch (err: unknown) {
+    console.error(`Error handling webhook event ${event.type}:`, err instanceof Error ? err.message : err);
     return NextResponse.json(
       { error: "Webhook handler failed" },
       { status: 500 }
@@ -57,11 +57,14 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
-async function handlePaymentIntentSucceeded(event: Stripe.Event) {
-  const paymentIntent = event.data.object as Stripe.PaymentIntent;
+async function handlePaymentIntentSucceeded(event: LuqraWebhookEvent) {
+  const paymentIntent = event.data.object as {
+    id: string;
+    metadata: Record<string, string>;
+  };
 
   const existing = await Transaction.findOne({
-    stripePaymentIntentId: paymentIntent.id,
+    luqraPaymentIntentId: paymentIntent.id,
   });
 
   if (existing) {
@@ -93,12 +96,15 @@ async function handlePaymentIntentSucceeded(event: Stripe.Event) {
     fee: feeAmount,
     totalCharged,
     status: "processed",
-    stripePaymentIntentId: paymentIntent.id,
+    luqraPaymentIntentId: paymentIntent.id,
   });
 }
 
-async function handleTransferCreated(event: Stripe.Event) {
-  const transfer = event.data.object as Stripe.Transfer;
+async function handleTransferCreated(event: LuqraWebhookEvent) {
+  const transfer = event.data.object as {
+    id: string;
+    metadata: Record<string, string>;
+  };
 
   const payoutId = transfer.metadata?.payoutId;
   const customerId = transfer.metadata?.customerId;
@@ -119,7 +125,7 @@ async function handleTransferCreated(event: Stripe.Event) {
 
   if (payout.status !== "completed") {
     payout.status = "completed";
-    payout.stripeTransferId = transfer.id;
+    payout.luqraTransferId = transfer.id;
     payout.completedAt = new Date();
     await payout.save();
   }
@@ -127,8 +133,12 @@ async function handleTransferCreated(event: Stripe.Event) {
   await markTransactionsDeposited(customerId, payout.amount);
 }
 
-async function handleTransferReversed(event: Stripe.Event) {
-  const transfer = event.data.object as Stripe.Transfer;
+async function handleTransferReversed(event: LuqraWebhookEvent) {
+  const transfer = event.data.object as {
+    id: string;
+    reversed: boolean;
+    metadata: Record<string, string>;
+  };
 
   const payoutId = transfer.metadata?.payoutId;
   if (!payoutId) {

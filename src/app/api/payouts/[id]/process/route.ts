@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { merchantAccounts, transfers } from "@/lib/luqra";
 import { connectDB } from "@/lib/db";
 import Payout from "@/lib/models/Payout";
 import Customer from "@/lib/models/Customer";
 import { markTransactionsDeposited } from "@/lib/markTransactionsDeposited";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(
   req: NextRequest,
@@ -29,27 +27,27 @@ export async function POST(
   if (!customer) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
-  if (!customer.stripeConnectedAccountId) {
+  if (!customer.luqraMerchantAccountId) {
     return NextResponse.json(
-      { error: "Customer has not connected a Stripe account" },
+      { error: "Customer has not connected a Luqra account" },
       { status: 400 }
     );
   }
 
-  // Verify the connected account can receive transfers
-  const account = await stripe.accounts.retrieve(customer.stripeConnectedAccountId);
+  // Verify the merchant account can receive transfers
+  const account = await merchantAccounts.retrieve(customer.luqraMerchantAccountId);
   if (!account.charges_enabled) {
     return NextResponse.json(
-      { error: "Customer's Stripe account is not fully onboarded" },
+      { error: "Customer's Luqra account is not fully onboarded" },
       { status: 400 }
     );
   }
 
-  // Create a Stripe Transfer to the connected account
-  const transfer = await stripe.transfers.create({
+  // Create a Luqra Transfer to the merchant account
+  const transfer = await transfers.create({
     amount: Math.round(payout.amount * 100), // cents
     currency: "usd",
-    destination: customer.stripeConnectedAccountId,
+    destination: customer.luqraMerchantAccountId,
     metadata: {
       payoutId: payout._id.toString(),
       customerId: customer._id.toString(),
@@ -58,7 +56,7 @@ export async function POST(
   });
 
   payout.status = "completed";
-  payout.stripeTransferId = transfer.id;
+  payout.luqraTransferId = transfer.id;
   payout.completedAt = new Date();
   await payout.save();
 
@@ -68,8 +66,8 @@ export async function POST(
       payout.customerId.toString(),
       payout.amount
     );
-  } catch (err: any) {
-    console.error("Failed to mark transactions as deposited:", err.message);
+  } catch (err: unknown) {
+    console.error("Failed to mark transactions as deposited:", err instanceof Error ? err.message : err);
   }
 
   return NextResponse.json(payout);

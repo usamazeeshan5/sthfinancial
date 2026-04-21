@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
 const statusOptions = ["all", "scheduled", "completed", "failed"];
-type Payout = { _id: string; customerName: string; amount: number; status: string; stripeTransferId?: string; scheduledAt: string; completedAt: string | null };
+type Payout = { _id: string; customerName: string; amount: number; status: string; luqraTransferId?: string; scheduledAt: string; completedAt: string | null };
 
 export default function PayoutsPage() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
