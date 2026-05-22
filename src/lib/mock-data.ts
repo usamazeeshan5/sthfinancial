@@ -25,7 +25,7 @@ export type Transaction = {
   fee: number;
   totalCharged: number;
   status: "pending" | "processed" | "deposited" | "failed";
-  luqraRefId: string;
+  squarePaymentId: string;
   createdAt: string;
 };
 
@@ -72,26 +72,26 @@ export const nfcChips: NfcChip[] = [
 ];
 
 export const transactions: Transaction[] = [
-  { id: "txn_001", customerId: "cust_001", customerName: "Marcus Johnson", amount: 15.00, fee: 0.89, totalCharged: 15.89, status: "deposited", luqraRefId: "LQ-2026-00001", createdAt: "2026-04-04T14:30:00" },
-  { id: "txn_002", customerId: "cust_002", customerName: "Sarah Williams", amount: 25.00, fee: 1.19, totalCharged: 26.19, status: "deposited", luqraRefId: "LQ-2026-00002", createdAt: "2026-04-04T13:15:00" },
-  { id: "txn_003", customerId: "cust_001", customerName: "Marcus Johnson", amount: 10.00, fee: 0.74, totalCharged: 10.74, status: "processed", luqraRefId: "LQ-2026-00003", createdAt: "2026-04-04T12:00:00" },
-  { id: "txn_004", customerId: "cust_004", customerName: "Emily Rodriguez", amount: 50.00, fee: 1.94, totalCharged: 51.94, status: "deposited", luqraRefId: "LQ-2026-00004", createdAt: "2026-04-04T11:45:00" },
-  { id: "txn_005", customerId: "cust_003", customerName: "David Chen", amount: 20.00, fee: 1.04, totalCharged: 21.04, status: "pending", luqraRefId: "LQ-2026-00005", createdAt: "2026-04-04T10:30:00" },
-  { id: "txn_006", customerId: "cust_006", customerName: "Olivia Martinez", amount: 35.00, fee: 1.49, totalCharged: 36.49, status: "deposited", luqraRefId: "LQ-2026-00006", createdAt: "2026-04-03T18:20:00" },
-  { id: "txn_007", customerId: "cust_007", customerName: "Daniel Kim", amount: 12.00, fee: 0.80, totalCharged: 12.80, status: "deposited", luqraRefId: "LQ-2026-00007", createdAt: "2026-04-03T16:00:00" },
-  { id: "txn_008", customerId: "cust_002", customerName: "Sarah Williams", amount: 40.00, fee: 1.64, totalCharged: 41.64, status: "failed", luqraRefId: "LQ-2026-00008", createdAt: "2026-04-03T14:45:00" },
-  { id: "txn_009", customerId: "cust_001", customerName: "Marcus Johnson", amount: 8.00, fee: 0.68, totalCharged: 8.68, status: "deposited", luqraRefId: "LQ-2026-00009", createdAt: "2026-04-03T12:30:00" },
-  { id: "txn_010", customerId: "cust_004", customerName: "Emily Rodriguez", amount: 30.00, fee: 1.34, totalCharged: 31.34, status: "deposited", luqraRefId: "LQ-2026-00010", createdAt: "2026-04-03T10:15:00" },
-  { id: "txn_011", customerId: "cust_006", customerName: "Olivia Martinez", amount: 18.00, fee: 0.98, totalCharged: 18.98, status: "deposited", luqraRefId: "LQ-2026-00011", createdAt: "2026-04-02T17:00:00" },
-  { id: "txn_012", customerId: "cust_007", customerName: "Daniel Kim", amount: 22.00, fee: 1.10, totalCharged: 23.10, status: "processed", luqraRefId: "LQ-2026-00012", createdAt: "2026-04-02T15:30:00" },
-  { id: "txn_013", customerId: "cust_001", customerName: "Marcus Johnson", amount: 5.00, fee: 0.59, totalCharged: 5.59, status: "deposited", luqraRefId: "LQ-2026-00013", createdAt: "2026-04-02T13:00:00" },
-  { id: "txn_014", customerId: "cust_003", customerName: "David Chen", amount: 45.00, fee: 1.79, totalCharged: 46.79, status: "deposited", luqraRefId: "LQ-2026-00014", createdAt: "2026-04-02T11:45:00" },
-  { id: "txn_015", customerId: "cust_002", customerName: "Sarah Williams", amount: 16.00, fee: 0.92, totalCharged: 16.92, status: "deposited", luqraRefId: "LQ-2026-00015", createdAt: "2026-04-01T19:00:00" },
-  { id: "txn_016", customerId: "cust_004", customerName: "Emily Rodriguez", amount: 28.00, fee: 1.28, totalCharged: 29.28, status: "deposited", luqraRefId: "LQ-2026-00016", createdAt: "2026-04-01T16:30:00" },
-  { id: "txn_017", customerId: "cust_008", customerName: "Sofia Patel", amount: 33.00, fee: 1.43, totalCharged: 34.43, status: "pending", luqraRefId: "LQ-2026-00017", createdAt: "2026-04-01T14:15:00" },
-  { id: "txn_018", customerId: "cust_006", customerName: "Olivia Martinez", amount: 11.00, fee: 0.77, totalCharged: 11.77, status: "deposited", luqraRefId: "LQ-2026-00018", createdAt: "2026-04-01T12:00:00" },
-  { id: "txn_019", customerId: "cust_007", customerName: "Daniel Kim", amount: 55.00, fee: 2.09, totalCharged: 57.09, status: "deposited", luqraRefId: "LQ-2026-00019", createdAt: "2026-03-31T18:30:00" },
-  { id: "txn_020", customerId: "cust_001", customerName: "Marcus Johnson", amount: 19.00, fee: 1.01, totalCharged: 20.01, status: "deposited", luqraRefId: "LQ-2026-00020", createdAt: "2026-03-31T15:00:00" },
+  { id: "txn_001", customerId: "cust_001", customerName: "Marcus Johnson", amount: 15.00, fee: 0.89, totalCharged: 15.89, status: "deposited", squarePaymentId: "SQ-2026-00001", createdAt: "2026-04-04T14:30:00" },
+  { id: "txn_002", customerId: "cust_002", customerName: "Sarah Williams", amount: 25.00, fee: 1.19, totalCharged: 26.19, status: "deposited", squarePaymentId: "SQ-2026-00002", createdAt: "2026-04-04T13:15:00" },
+  { id: "txn_003", customerId: "cust_001", customerName: "Marcus Johnson", amount: 10.00, fee: 0.74, totalCharged: 10.74, status: "processed", squarePaymentId: "SQ-2026-00003", createdAt: "2026-04-04T12:00:00" },
+  { id: "txn_004", customerId: "cust_004", customerName: "Emily Rodriguez", amount: 50.00, fee: 1.94, totalCharged: 51.94, status: "deposited", squarePaymentId: "SQ-2026-00004", createdAt: "2026-04-04T11:45:00" },
+  { id: "txn_005", customerId: "cust_003", customerName: "David Chen", amount: 20.00, fee: 1.04, totalCharged: 21.04, status: "pending", squarePaymentId: "SQ-2026-00005", createdAt: "2026-04-04T10:30:00" },
+  { id: "txn_006", customerId: "cust_006", customerName: "Olivia Martinez", amount: 35.00, fee: 1.49, totalCharged: 36.49, status: "deposited", squarePaymentId: "SQ-2026-00006", createdAt: "2026-04-03T18:20:00" },
+  { id: "txn_007", customerId: "cust_007", customerName: "Daniel Kim", amount: 12.00, fee: 0.80, totalCharged: 12.80, status: "deposited", squarePaymentId: "SQ-2026-00007", createdAt: "2026-04-03T16:00:00" },
+  { id: "txn_008", customerId: "cust_002", customerName: "Sarah Williams", amount: 40.00, fee: 1.64, totalCharged: 41.64, status: "failed", squarePaymentId: "SQ-2026-00008", createdAt: "2026-04-03T14:45:00" },
+  { id: "txn_009", customerId: "cust_001", customerName: "Marcus Johnson", amount: 8.00, fee: 0.68, totalCharged: 8.68, status: "deposited", squarePaymentId: "SQ-2026-00009", createdAt: "2026-04-03T12:30:00" },
+  { id: "txn_010", customerId: "cust_004", customerName: "Emily Rodriguez", amount: 30.00, fee: 1.34, totalCharged: 31.34, status: "deposited", squarePaymentId: "SQ-2026-00010", createdAt: "2026-04-03T10:15:00" },
+  { id: "txn_011", customerId: "cust_006", customerName: "Olivia Martinez", amount: 18.00, fee: 0.98, totalCharged: 18.98, status: "deposited", squarePaymentId: "SQ-2026-00011", createdAt: "2026-04-02T17:00:00" },
+  { id: "txn_012", customerId: "cust_007", customerName: "Daniel Kim", amount: 22.00, fee: 1.10, totalCharged: 23.10, status: "processed", squarePaymentId: "SQ-2026-00012", createdAt: "2026-04-02T15:30:00" },
+  { id: "txn_013", customerId: "cust_001", customerName: "Marcus Johnson", amount: 5.00, fee: 0.59, totalCharged: 5.59, status: "deposited", squarePaymentId: "SQ-2026-00013", createdAt: "2026-04-02T13:00:00" },
+  { id: "txn_014", customerId: "cust_003", customerName: "David Chen", amount: 45.00, fee: 1.79, totalCharged: 46.79, status: "deposited", squarePaymentId: "SQ-2026-00014", createdAt: "2026-04-02T11:45:00" },
+  { id: "txn_015", customerId: "cust_002", customerName: "Sarah Williams", amount: 16.00, fee: 0.92, totalCharged: 16.92, status: "deposited", squarePaymentId: "SQ-2026-00015", createdAt: "2026-04-01T19:00:00" },
+  { id: "txn_016", customerId: "cust_004", customerName: "Emily Rodriguez", amount: 28.00, fee: 1.28, totalCharged: 29.28, status: "deposited", squarePaymentId: "SQ-2026-00016", createdAt: "2026-04-01T16:30:00" },
+  { id: "txn_017", customerId: "cust_008", customerName: "Sofia Patel", amount: 33.00, fee: 1.43, totalCharged: 34.43, status: "pending", squarePaymentId: "SQ-2026-00017", createdAt: "2026-04-01T14:15:00" },
+  { id: "txn_018", customerId: "cust_006", customerName: "Olivia Martinez", amount: 11.00, fee: 0.77, totalCharged: 11.77, status: "deposited", squarePaymentId: "SQ-2026-00018", createdAt: "2026-04-01T12:00:00" },
+  { id: "txn_019", customerId: "cust_007", customerName: "Daniel Kim", amount: 55.00, fee: 2.09, totalCharged: 57.09, status: "deposited", squarePaymentId: "SQ-2026-00019", createdAt: "2026-03-31T18:30:00" },
+  { id: "txn_020", customerId: "cust_001", customerName: "Marcus Johnson", amount: 19.00, fee: 1.01, totalCharged: 20.01, status: "deposited", squarePaymentId: "SQ-2026-00020", createdAt: "2026-03-31T15:00:00" },
 ];
 
 export const payouts: Payout[] = [

@@ -5,7 +5,7 @@ export interface IPayout extends Document {
   customerName: string;
   amount: number;
   status: "scheduled" | "completed" | "failed";
-  luqraTransferId?: string;
+  squarePayoutId?: string;
   scheduledAt: Date;
   completedAt: Date | null;
 }
@@ -25,7 +25,7 @@ const PayoutSchema = new Schema<IPayout>(
       default: "scheduled",
     },
     scheduledAt: { type: Date, required: true },
-    luqraTransferId: { type: String, sparse: true },
+    squarePayoutId: { type: String, sparse: true },
     completedAt: { type: Date, default: null },
   },
   { timestamps: true }

@@ -44,16 +44,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
 
-  if (!customer.luqraMerchantAccountId) {
+  if (!customer.squareMerchantId) {
     return NextResponse.json(
-      { error: "Please connect your Luqra account before requesting a payout" },
+      { error: "Please connect your Square account before requesting a payout" },
       { status: 400 }
     );
   }
 
   if (customer.bankAccountStatus !== "connected") {
     return NextResponse.json(
-      { error: "Please complete Luqra onboarding before requesting a payout" },
+      { error: "Please complete Square onboarding before requesting a payout" },
       { status: 400 }
     );
   }
@@ -99,12 +99,10 @@ async function calculateAvailableBalance(customerId: string): Promise<number> {
   const objectId = new mongoose.Types.ObjectId(customerId);
 
   const [earningsResult, paidOutResult] = await Promise.all([
-    // Total earnings from processed/deposited transactions
     Transaction.aggregate([
       { $match: { customerId: objectId, status: { $in: ["processed", "deposited"] } } },
       { $group: { _id: null, sum: { $sum: "$amount" } } },
     ]),
-    // Total already paid out or scheduled
     Payout.aggregate([
       { $match: { customerId: objectId, status: { $in: ["scheduled", "completed"] } } },
       { $group: { _id: null, sum: { $sum: "$amount" } } },

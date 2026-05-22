@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { paymentIntents } from "@/lib/luqra";
+import { randomUUID } from "crypto";
 import { connectDB } from "@/lib/db";
 import NfcChip from "@/lib/models/NfcChip";
 import FeeConfig from "@/lib/models/FeeConfig";
+import Transaction from "@/lib/models/Transaction";
 
 export async function POST(req: NextRequest) {
   await connectDB();
@@ -16,7 +17,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Find the chip and its linked customer
   const chip = await NfcChip.findOne({ chipUid, status: "active" });
   if (!chip || !chip.customerId) {
     return NextResponse.json(
@@ -25,7 +25,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Calculate fees
   let feeConfig = await FeeConfig.findOne();
   if (!feeConfig) {
     feeConfig = await FeeConfig.create({ flatFee: 0.3, percentageFee: 3.9 });
@@ -37,23 +36,20 @@ export async function POST(req: NextRequest) {
     ) / 100;
   const totalCharged = Math.round((amount + fee) * 100) / 100;
 
-  // Create Luqra PaymentIntent (amount in cents)
-  const paymentIntent = await paymentIntents.create({
-    amount: Math.round(totalCharged * 100),
-    currency: "usd",
-    automatic_payment_methods: { enabled: true },
-    metadata: {
-      chipUid,
-      customerId: chip.customerId.toString(),
-      customerName: chip.customerName || "",
-      tipAmount: amount.toString(),
-      fee: fee.toString(),
-    },
+  const quoteId = randomUUID();
+
+  await Transaction.create({
+    customerId: chip.customerId,
+    customerName: chip.customerName || "",
+    amount,
+    fee,
+    totalCharged,
+    status: "quoted",
+    quoteId,
   });
 
   return NextResponse.json({
-    clientSecret: paymentIntent.client_secret,
-    paymentIntentId: paymentIntent.id,
+    quoteId,
     amount,
     fee,
     totalCharged,

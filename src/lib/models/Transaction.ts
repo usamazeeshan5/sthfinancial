@@ -6,9 +6,9 @@ export interface ITransaction extends Document {
   amount: number;
   fee: number;
   totalCharged: number;
-  status: "pending" | "processed" | "deposited" | "failed";
-  luqraRefId?: string;
-  luqraPaymentIntentId?: string;
+  status: "quoted" | "pending" | "processed" | "deposited" | "failed";
+  quoteId?: string;
+  squarePaymentId?: string;
   createdAt: Date;
 }
 
@@ -25,11 +25,11 @@ const TransactionSchema = new Schema<ITransaction>(
     totalCharged: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["pending", "processed", "deposited", "failed"],
-      default: "pending",
+      enum: ["quoted", "pending", "processed", "deposited", "failed"],
+      default: "quoted",
     },
-    luqraRefId: { type: String, unique: true, sparse: true },
-    luqraPaymentIntentId: { type: String, unique: true, sparse: true },
+    quoteId: { type: String, unique: true, sparse: true },
+    squarePaymentId: { type: String, unique: true, sparse: true },
   },
   { timestamps: true }
 );
