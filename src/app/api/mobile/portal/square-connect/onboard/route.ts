@@ -3,17 +3,17 @@ import { connectDB } from "@/lib/db";
 import Customer from "@/lib/models/Customer";
 import { verifyToken } from "@/lib/jwt";
 
-// NOTE: Square's multi-merchant model uses OAuth (not API-created "merchant accounts"
-// like Stripe Connect). To finish this endpoint you need to:
-//   1. Set SQUARE_APPLICATION_ID and SQUARE_APPLICATION_SECRET in env
-//   2. Add OAuth callback at /api/mobile/portal/square-connect/callback that
-//      calls squareClient.oAuth.obtainToken({ code, grantType: "authorization_code" })
-//      and stores the seller's access_token + merchant_id on the Customer record
-//   3. Add fields squareAccessToken + squareRefreshToken to the Customer model
-//   4. Use the seller's access_token (not the platform's) when charging tips destined
-//      for that seller, so funds settle to the seller's own Square balance
+// Returns a Square OAuth authorize URL the mobile app should open in the
+// device browser. After the seller consents, Square redirects back to the
+// callback route in this folder, which exchanges the code for tokens.
 //
-// Docs: https://developer.squareup.com/docs/oauth-api/overview
+// Required env vars:
+//   SQUARE_APPLICATION_ID     — app ID from the Square Developer Dashboard
+//   SQUARE_APPLICATION_SECRET — app secret (used by the callback)
+//   SQUARE_OAUTH_REDIRECT_URI — must match the redirect URI registered in
+//                               the Square Developer Dashboard EXACTLY.
+//                               Defaults to <vercel-host>/api/mobile/portal/square-connect/callback
+//                               based on the request, but should be set explicitly in prod.
 
 export async function POST(req: NextRequest) {
   await connectDB();
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const applicationId = process.env.SQUARE_APPLICATION_ID;
   if (!applicationId) {
     return NextResponse.json(
-      { error: "Square OAuth not yet configured. See route comment for setup steps." },
+      { error: "Square OAuth not configured: SQUARE_APPLICATION_ID is missing." },
       { status: 501 }
     );
   }
@@ -44,6 +44,17 @@ export async function POST(req: NextRequest) {
   const oauthBase = isSandbox
     ? "https://connect.squareupsandbox.com"
     : "https://connect.squareup.com";
+
+  // Resolve the redirect URI. Prefer an explicit env var so it matches the
+  // value registered in Square's Developer Dashboard exactly; otherwise
+  // derive it from the request host as a sensible default.
+  const origin =
+    req.headers.get("x-forwarded-host")
+      ? `https://${req.headers.get("x-forwarded-host")}`
+      : new URL(req.url).origin;
+  const redirectUri =
+    process.env.SQUARE_OAUTH_REDIRECT_URI ||
+    `${origin}/api/mobile/portal/square-connect/callback`;
 
   const scope = [
     "MERCHANT_PROFILE_READ",
@@ -54,14 +65,21 @@ export async function POST(req: NextRequest) {
   ].join(" ");
 
   const state = customer._id.toString();
-  const url = `${oauthBase}/oauth2/authorize?client_id=${applicationId}&scope=${encodeURIComponent(scope)}&session=false&state=${state}`;
+  const params = new URLSearchParams({
+    client_id: applicationId,
+    scope,
+    session: "false",
+    state,
+    redirect_uri: redirectUri,
+  });
+  const url = `${oauthBase}/oauth2/authorize?${params.toString()}`;
+
+  // Mark onboarding as in-flight so the status endpoint can show "pending"
+  // until the callback completes.
+  if (customer.bankAccountStatus !== "connected") {
+    customer.bankAccountStatus = "pending";
+    await customer.save();
+  }
 
   return NextResponse.json({ url });
-}
-
-export async function GET() {
-  return new Response(
-    `<html><body><p>Returning to app...</p><script>window.location.href="lovetap://payouts";</script></body></html>`,
-    { headers: { "Content-Type": "text/html" } }
-  );
 }

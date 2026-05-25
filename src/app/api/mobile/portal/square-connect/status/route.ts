@@ -22,15 +22,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const customer = await Customer.findById(payload.id);
+  // Need to explicitly select the access token since it's `select: false`
+  // on the schema — without it, hasConnection would always be false.
+  const customer = await Customer.findById(payload.id).select(
+    "+squareAccessToken bankAccountStatus squareMerchantId"
+  );
   if (!customer) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
 
-  const hasConnection = !!customer.squareMerchantId;
+  const hasConnection = !!customer.squareMerchantId && !!customer.squareAccessToken;
 
   return NextResponse.json({
-    status: hasConnection ? customer.bankAccountStatus : "disconnected",
+    status: hasConnection
+      ? customer.bankAccountStatus
+      : customer.bankAccountStatus === "pending"
+      ? "pending"
+      : "disconnected",
     chargesEnabled: hasConnection,
     detailsSubmitted: hasConnection,
   });

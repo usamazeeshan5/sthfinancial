@@ -7,6 +7,9 @@ export interface ICustomer extends Document {
   password: string;
   bankAccountStatus: "connected" | "pending" | "disconnected";
   squareMerchantId?: string;
+  squareAccessToken?: string;
+  squareRefreshToken?: string;
+  squareTokenExpiresAt?: Date | null;
   active: boolean;
   createdAt: Date;
 }
@@ -23,6 +26,9 @@ const CustomerSchema = new Schema<ICustomer>(
       default: "pending",
     },
     squareMerchantId: { type: String, default: null },
+    squareAccessToken: { type: String, default: null, select: false },
+    squareRefreshToken: { type: String, default: null, select: false },
+    squareTokenExpiresAt: { type: Date, default: null },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }
