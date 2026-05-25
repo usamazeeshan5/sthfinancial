@@ -10,6 +10,7 @@ export interface ICustomer extends Document {
   squareAccessToken?: string;
   squareRefreshToken?: string;
   squareTokenExpiresAt?: Date | null;
+  squareLocationId?: string | null;
   active: boolean;
   createdAt: Date;
 }
@@ -29,6 +30,7 @@ const CustomerSchema = new Schema<ICustomer>(
     squareAccessToken: { type: String, default: null, select: false },
     squareRefreshToken: { type: String, default: null, select: false },
     squareTokenExpiresAt: { type: Date, default: null },
+    squareLocationId: { type: String, default: null },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }
