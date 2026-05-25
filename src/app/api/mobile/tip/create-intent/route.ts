@@ -48,11 +48,25 @@ export async function POST(req: NextRequest) {
     quoteId,
   });
 
+  // Public Square Web Payments SDK config — applicationId and locationId are
+  // not secrets; the mobile WebView needs them to tokenize a card. The actual
+  // charge still happens server-side in /api/mobile/tip/charge with the
+  // server-only SQUARE_ACCESS_TOKEN.
+  const squareEnvironment =
+    process.env.SQUARE_ENVIRONMENT === "production" ? "production" : "sandbox";
+  const squareApplicationId = process.env.SQUARE_APPLICATION_ID || null;
+  const squareLocationId = process.env.SQUARE_LOCATION_ID || null;
+
   return NextResponse.json({
     quoteId,
     amount,
     fee,
     totalCharged,
     customerName: chip.customerName,
+    square: {
+      applicationId: squareApplicationId,
+      locationId: squareLocationId,
+      environment: squareEnvironment,
+    },
   });
 }
