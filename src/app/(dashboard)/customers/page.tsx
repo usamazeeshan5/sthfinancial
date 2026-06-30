@@ -20,6 +20,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Customer | null>(null);
+  const [newChip, setNewChip] = useState<{ name: string; code: string } | null>(null);
 
   const fetchCustomers = useCallback(async () => {
     const res = await fetch(`/api/customers?search=${encodeURIComponent(search)}`);
@@ -61,9 +62,11 @@ export default function CustomersPage() {
       setError(data.error || "Failed to add customer");
       return;
     }
+    const createdName = form.name;
     setForm({ name: "", email: "", phone: "", password: "" });
     setShowAdd(false);
     setError("");
+    if (data.chipCode) setNewChip({ name: createdName, code: data.chipCode });
     fetchCustomers();
   };
 
@@ -89,6 +92,14 @@ export default function CustomersPage() {
           <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={() => { setShowAdd(false); setForm({ name: "", email: "", phone: "", password: "" }); setError(""); }} className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium text-muted hover:text-foreground transition-colors">Cancel</button><button type="submit" className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">Add Customer</button></div>
         
         </form>
+      </Modal>
+      <Modal open={newChip !== null} onClose={() => setNewChip(null)} title="Customer Added">
+        <div className="space-y-4">
+          <p className="text-sm text-muted"><span className="font-medium text-foreground">{newChip?.name}</span> was created. Their chip code is:</p>
+          <div className="bg-background border border-border rounded-2xl py-5 flex items-center justify-center"><span className="text-2xl font-extrabold tracking-widest text-accent font-mono">{newChip?.code}</span></div>
+          <p className="text-xs text-muted">Use this code when programming the customer&apos;s NFC chip. You can also find it anytime in the NFC Chips page.</p>
+          <div className="flex justify-end pt-2"><button type="button" onClick={() => setNewChip(null)} className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">Done</button></div>
+        </div>
       </Modal>
       <Modal open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title="Delete Customer">
         <div className="space-y-4">
