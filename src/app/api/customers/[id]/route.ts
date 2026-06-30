@@ -52,3 +52,26 @@ export async function PATCH(
 
   return NextResponse.json(customer);
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  await connectDB();
+  const { id } = await params;
+
+  const customer = await Customer.findById(id);
+  if (!customer) {
+    return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+  }
+
+  // Release any chips this customer claimed so the codes can be reused, then
+  // remove the customer record.
+  await NfcChip.updateMany(
+    { customerId: id },
+    { customerId: null, customerName: null, claimed: false, claimedAt: null }
+  );
+  await Customer.findByIdAndDelete(id);
+
+  return NextResponse.json({ success: true });
+}

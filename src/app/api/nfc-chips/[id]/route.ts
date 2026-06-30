@@ -21,8 +21,12 @@ export async function PATCH(
       );
     }
     body.customerName = customer.name;
+    body.claimed = true;
+    body.claimedAt = new Date();
   } else if (body.customerId === null) {
     body.customerName = null;
+    body.claimed = false;
+    body.claimedAt = null;
   }
 
   const chip = await NfcChip.findByIdAndUpdate(id, body, { new: true });
@@ -31,4 +35,19 @@ export async function PATCH(
   }
 
   return NextResponse.json(chip);
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  await connectDB();
+  const { id } = await params;
+
+  const chip = await NfcChip.findByIdAndDelete(id);
+  if (!chip) {
+    return NextResponse.json({ error: "Chip not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ success: true });
 }

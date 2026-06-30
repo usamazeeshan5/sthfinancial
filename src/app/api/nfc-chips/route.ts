@@ -37,6 +37,8 @@ export async function POST(req: NextRequest) {
     chipUid,
     customerId: customerId || null,
     customerName,
+    claimed: !!customerId,
+    claimedAt: customerId ? new Date() : null,
   });
 
   return NextResponse.json(chip, { status: 201 });
