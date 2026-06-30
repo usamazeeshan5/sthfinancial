@@ -23,6 +23,7 @@ export default function PayoutsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actingId, setActingId] = useState<string | null>(null);
 
   const fetchPayouts = () => {
     setLoading(true);
@@ -34,11 +35,29 @@ export default function PayoutsPage() {
         setLoading(false);
       })
       .catch(() => {
-        setError("Failed to load payouts from Square.");
+        setError("Failed to load payouts.");
         setLoading(false);
       });
   };
   useEffect(fetchPayouts, [statusFilter]);
+
+  const act = async (id: string, action: "process" | "retry") => {
+    setActingId(id);
+    setError(null);
+    try {
+      const r = await fetch(`/api/payouts/${id}/${action}`, { method: "POST" });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setError(d.error || `Failed to ${action} payout.`);
+      } else {
+        fetchPayouts();
+      }
+    } catch {
+      setError(`Failed to ${action} payout.`);
+    } finally {
+      setActingId(null);
+    }
+  };
 
   const totalScheduled = payouts.filter((p) => p.status === "scheduled").reduce((s, p) => s + p.amount, 0);
   const totalCompleted = payouts.filter((p) => p.status === "completed").reduce((s, p) => s + p.amount, 0);
@@ -49,7 +68,7 @@ export default function PayoutsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Payouts</h1>
         <p className="text-sm text-muted mt-1">
-          Square&apos;s bank transfers for each connected worker. Tips land directly in the worker&apos;s Square balance and are paid out by Square on their schedule.
+          Payout requests from workers. Tap Process to approve a scheduled request — this marks the worker&apos;s tips as deposited. (Square still auto-deposits their Square balance to their bank on its own schedule.)
         </p>
       </div>
 
@@ -98,7 +117,7 @@ export default function PayoutsPage() {
         </div>
       ) : payouts.length === 0 ? (
         <div className="bg-card rounded-2xl border border-border p-8 text-center text-sm text-muted">
-          No payouts yet. Square will create one as soon as a connected worker accumulates a balance.
+          No payout requests yet. They&apos;ll appear here when a worker requests a payout from the app.
         </div>
       ) : (
         <>
@@ -112,8 +131,9 @@ export default function PayoutsPage() {
                     <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Amount</th>
                     <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Status</th>
                     <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Destination</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Arrival</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Requested</th>
                     <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Completed</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -125,6 +145,27 @@ export default function PayoutsPage() {
                       <td className="px-5 py-3 text-muted">{p.destination}</td>
                       <td className="px-5 py-3 text-muted">{formatDate(p.scheduledAt)}</td>
                       <td className="px-5 py-3 text-muted">{p.completedAt ? formatDateTime(p.completedAt) : "—"}</td>
+                      <td className="px-5 py-3">
+                        {p.status === "scheduled" ? (
+                          <button
+                            onClick={() => act(p._id, "process")}
+                            disabled={actingId === p._id}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50"
+                          >
+                            {actingId === p._id ? "Processing..." : "Process"}
+                          </button>
+                        ) : p.status === "failed" ? (
+                          <button
+                            onClick={() => act(p._id, "retry")}
+                            disabled={actingId === p._id}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-card border border-border disabled:opacity-50"
+                          >
+                            {actingId === p._id ? "Retrying..." : "Retry"}
+                          </button>
+                        ) : (
+                          <span className="text-muted text-xs">—</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -143,9 +184,27 @@ export default function PayoutsPage() {
                 <p className="text-lg font-semibold">{formatCurrency(p.amount)}</p>
                 <div className="text-xs text-muted">
                   <p>Destination: {p.destination}</p>
-                  <p>Arrival: {formatDate(p.scheduledAt)}</p>
+                  <p>Requested: {formatDate(p.scheduledAt)}</p>
                   {p.completedAt && <p>Completed: {formatDateTime(p.completedAt)}</p>}
                 </div>
+                {p.status === "scheduled" && (
+                  <button
+                    onClick={() => act(p._id, "process")}
+                    disabled={actingId === p._id}
+                    className="w-full mt-1 px-3 py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50"
+                  >
+                    {actingId === p._id ? "Processing..." : "Process Payout"}
+                  </button>
+                )}
+                {p.status === "failed" && (
+                  <button
+                    onClick={() => act(p._id, "retry")}
+                    disabled={actingId === p._id}
+                    className="w-full mt-1 px-3 py-2 rounded-lg text-xs font-medium bg-card border border-border disabled:opacity-50"
+                  >
+                    {actingId === p._id ? "Retrying..." : "Retry Payout"}
+                  </button>
+                )}
               </div>
             ))}
           </div>

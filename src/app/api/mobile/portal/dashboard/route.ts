@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/lib/models/Transaction";
 import Payout from "@/lib/models/Payout";
@@ -8,23 +9,28 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const customerId = searchParams.get("customerId");
 
-  if (!customerId) {
+  if (!customerId || !mongoose.Types.ObjectId.isValid(customerId)) {
     return NextResponse.json(
-      { error: "customerId is required" },
+      { error: "A valid customerId is required" },
       { status: 400 }
     );
   }
 
+  // The aggregation $match stages compare against the stored ObjectId field and
+  // do NOT auto-cast a string (unlike Mongoose find/countDocuments), so the
+  // query param must be converted explicitly or every sum comes back empty.
+  const customerObjectId = new mongoose.Types.ObjectId(customerId);
+
   const [totalEarnings, thisMonth, pendingResult, txCount, recentTransactions, chartData] =
     await Promise.all([
       Transaction.aggregate([
-        { $match: { customerId: customerId, status: { $in: ["deposited", "processed"] } } },
+        { $match: { customerId: customerObjectId, status: { $in: ["deposited", "processed"] } } },
         { $group: { _id: null, sum: { $sum: "$amount" } } },
       ]),
       Transaction.aggregate([
         {
           $match: {
-            customerId: customerId,
+            customerId: customerObjectId,
             status: { $in: ["deposited", "processed"] },
             createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
           },
@@ -32,15 +38,15 @@ export async function GET(req: NextRequest) {
         { $group: { _id: null, sum: { $sum: "$amount" } } },
       ]),
       Payout.aggregate([
-        { $match: { customerId: customerId, status: "scheduled" } },
+        { $match: { customerId: customerObjectId, status: "scheduled" } },
         { $group: { _id: null, sum: { $sum: "$amount" } } },
       ]),
-      Transaction.countDocuments({ customerId }),
-      Transaction.find({ customerId }).sort({ createdAt: -1 }).limit(10),
+      Transaction.countDocuments({ customerId: customerObjectId }),
+      Transaction.find({ customerId: customerObjectId }).sort({ createdAt: -1 }).limit(10),
       Transaction.aggregate([
         {
           $match: {
-            customerId: customerId,
+            customerId: customerObjectId,
             createdAt: { $gte: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000) },
           },
         },
