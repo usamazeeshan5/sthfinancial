@@ -68,7 +68,10 @@ export async function POST(req: NextRequest) {
   const params = new URLSearchParams({
     client_id: applicationId,
     scope,
-    session: "false",
+    // Square requires session=false in production, but the Sandbox authorize
+    // page ONLY supports session=true — passing session=false in Sandbox
+    // renders a blank page. So flip it based on the environment.
+    session: isSandbox ? "true" : "false",
     state,
     redirect_uri: redirectUri,
   });
