@@ -89,6 +89,11 @@ export async function POST(req: NextRequest) {
     amount,
     fee,
     totalCharged,
+    // Surface the actual rates the fee was computed from so the client can
+    // display an accurate breakdown instead of recomputing from its own
+    // hardcoded constants (which drift whenever admin changes the fee config).
+    percentageFee: feeConfig.percentageFee,
+    flatFee: feeConfig.flatFee,
     customerName: chip.customerName,
     square: {
       applicationId: squareApplicationId,
