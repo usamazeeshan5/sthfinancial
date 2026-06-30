@@ -115,11 +115,36 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     txn.status = "failed";
     await txn.save();
-    // Square OAuth tokens can expire / be revoked; surface that clearly so
-    // the worker knows to re-onboard.
-    const message =
-      err instanceof Error ? err.message : "Square payment failed";
-    if (/unauthorized|expired|revoked|access_token/i.test(message)) {
+
+    // Square SDK (v44) throws errors carrying a structured `errors` array
+    // (sometimes under `.body`). Pull out the real code/detail so we don't
+    // mislabel card declines and validation failures as opaque 500s.
+    const e = err as {
+      statusCode?: number;
+      message?: string;
+      errors?: Array<{ category?: string; code?: string; detail?: string }>;
+      body?: { errors?: Array<{ category?: string; code?: string; detail?: string }> };
+    };
+    const sqErrors = e?.errors || e?.body?.errors || [];
+    const first = sqErrors[0];
+    const code = first?.code || "";
+    const detail =
+      first?.detail || e?.message || "Square payment failed. Please try again.";
+
+    console.error("[mobile/tip/charge] Square error:", {
+      statusCode: e?.statusCode,
+      code,
+      category: first?.category,
+      detail,
+    });
+
+    // Expired / revoked OAuth token — recipient must reconnect.
+    if (
+      e?.statusCode === 401 ||
+      /UNAUTHORIZED|ACCESS_TOKEN_EXPIRED|ACCESS_TOKEN_REVOKED|INSUFFICIENT_SCOPES/i.test(
+        `${code} ${detail}`
+      )
+    ) {
       return NextResponse.json(
         {
           error:
@@ -128,6 +153,23 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
-    return NextResponse.json({ error: message }, { status: 500 });
+
+    // Card-side problems (decline, CVV, expiry, postal) are the customer's to
+    // fix — surface the specific reason and use 402, not 500, so the app shows
+    // it instead of a generic "server error".
+    const cardCodes =
+      /CARD_DECLINED|CVV_FAILURE|ADDRESS_VERIFICATION_FAILURE|INVALID_EXPIRATION|CARD_EXPIRED|GENERIC_DECLINE|INSUFFICIENT_FUNDS|INVALID_CARD|VERIFY_CVV_FAILURE|VERIFY_AVS_FAILURE|CARD_NOT_SUPPORTED|INVALID_POSTAL_CODE/i;
+    if (cardCodes.test(code)) {
+      return NextResponse.json(
+        { error: detail || "Your card was declined. Please try another card." },
+        { status: 402 }
+      );
+    }
+
+    // Anything else: return the real Square detail (not a blank 500).
+    return NextResponse.json(
+      { error: detail, code },
+      { status: e?.statusCode && e.statusCode >= 400 ? e.statusCode : 500 }
+    );
   }
 }
