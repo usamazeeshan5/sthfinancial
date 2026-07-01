@@ -156,12 +156,39 @@ export async function POST(req: NextRequest) {
 
     // Card-side problems (decline, CVV, expiry, postal) are the customer's to
     // fix — surface the specific reason and use 402, not 500, so the app shows
-    // it instead of a generic "server error".
-    const cardCodes =
-      /CARD_DECLINED|CVV_FAILURE|ADDRESS_VERIFICATION_FAILURE|INVALID_EXPIRATION|CARD_EXPIRED|GENERIC_DECLINE|INSUFFICIENT_FUNDS|INVALID_CARD|VERIFY_CVV_FAILURE|VERIFY_AVS_FAILURE|CARD_NOT_SUPPORTED|INVALID_POSTAL_CODE/i;
-    if (cardCodes.test(code)) {
+    // it instead of a generic "server error". Map Square's raw codes to clear,
+    // actionable messages so tippers don't see cryptic strings like
+    // "Authorization error: 'INVALID_EXPIRATION'".
+    const cardMessages: Record<string, string> = {
+      INVALID_EXPIRATION:
+        "The card's expiration date is invalid or has passed. Please check the expiry date and try again.",
+      CARD_EXPIRED:
+        "This card has expired. Please use a different card.",
+      CVV_FAILURE:
+        "The security code (CVV) is incorrect. Please re-enter it and try again.",
+      VERIFY_CVV_FAILURE:
+        "The security code (CVV) is incorrect. Please re-enter it and try again.",
+      INVALID_POSTAL_CODE:
+        "The postal/ZIP code doesn't match this card. Please check it and try again.",
+      ADDRESS_VERIFICATION_FAILURE:
+        "The billing ZIP code couldn't be verified. Please check it and try again.",
+      VERIFY_AVS_FAILURE:
+        "The billing ZIP code couldn't be verified. Please check it and try again.",
+      INSUFFICIENT_FUNDS:
+        "The card has insufficient funds. Please use a different card.",
+      CARD_NOT_SUPPORTED:
+        "This type of card isn't supported. Please use a different card.",
+      INVALID_CARD:
+        "The card details are invalid. Please re-enter your card and try again.",
+      CARD_DECLINED:
+        "Your card was declined. Please try a different card.",
+      GENERIC_DECLINE:
+        "Your card was declined. Please try a different card.",
+    };
+    const upperCode = code.toUpperCase();
+    if (upperCode in cardMessages) {
       return NextResponse.json(
-        { error: detail || "Your card was declined. Please try another card." },
+        { error: cardMessages[upperCode], code },
         { status: 402 }
       );
     }
