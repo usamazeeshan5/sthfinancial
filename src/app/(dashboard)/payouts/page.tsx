@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { MoreHorizontal, Eye, Play, RotateCw } from "lucide-react";
+import { Modal } from "@/components/modal";
 import { StatusBadge } from "@/components/status-badge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
@@ -24,6 +26,8 @@ export default function PayoutsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Payout | null>(null);
 
   const fetchPayouts = () => {
     setLoading(true);
@@ -40,6 +44,14 @@ export default function PayoutsPage() {
       });
   };
   useEffect(fetchPayouts, [statusFilter]);
+
+  // Close the row actions menu when clicking elsewhere.
+  useEffect(() => {
+    if (!openMenu) return;
+    const close = () => setOpenMenu(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [openMenu]);
 
   const act = async (id: string, action: "process" | "retry") => {
     setActingId(id);
@@ -133,7 +145,7 @@ export default function PayoutsPage() {
                     <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Destination</th>
                     <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Requested</th>
                     <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Completed</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
+                    <th className="text-right px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -146,25 +158,36 @@ export default function PayoutsPage() {
                       <td className="px-5 py-3 text-muted">{formatDate(p.scheduledAt)}</td>
                       <td className="px-5 py-3 text-muted">{p.completedAt ? formatDateTime(p.completedAt) : "—"}</td>
                       <td className="px-5 py-3">
-                        {p.status === "scheduled" ? (
-                          <button
-                            onClick={() => act(p._id, "process")}
-                            disabled={actingId === p._id}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50"
-                          >
-                            {actingId === p._id ? "Processing..." : "Process"}
-                          </button>
-                        ) : p.status === "failed" ? (
-                          <button
-                            onClick={() => act(p._id, "retry")}
-                            disabled={actingId === p._id}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-card border border-border disabled:opacity-50"
-                          >
-                            {actingId === p._id ? "Retrying..." : "Retry"}
-                          </button>
-                        ) : (
-                          <span className="text-muted text-xs">—</span>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {p.status === "scheduled" && (
+                            <button
+                              onClick={() => act(p._id, "process")}
+                              disabled={actingId === p._id}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50"
+                            >
+                              {actingId === p._id ? "Processing..." : "Process"}
+                            </button>
+                          )}
+                          {p.status === "failed" && (
+                            <button
+                              onClick={() => act(p._id, "retry")}
+                              disabled={actingId === p._id}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-card border border-border disabled:opacity-50"
+                            >
+                              {actingId === p._id ? "Retrying..." : "Retry"}
+                            </button>
+                          )}
+                          <div className="relative">
+                            <button onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === p._id ? null : p._id); }} className="p-1 rounded-lg hover:bg-sidebar-hover"><MoreHorizontal className="w-4 h-4 text-muted" /></button>
+                            {openMenu === p._id && (
+                              <div onClick={(e) => e.stopPropagation()} className="absolute right-0 top-8 z-20 w-44 bg-card border border-border rounded-xl shadow-lg py-1">
+                                <button onClick={() => { setOpenMenu(null); setDetail(p); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-background transition-colors"><Eye className="w-4 h-4 text-muted" />View details</button>
+                                {p.status === "scheduled" && <button onClick={() => { setOpenMenu(null); act(p._id, "process"); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-background transition-colors"><Play className="w-4 h-4 text-muted" />Process</button>}
+                                {p.status === "failed" && <button onClick={() => { setOpenMenu(null); act(p._id, "retry"); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-background transition-colors"><RotateCw className="w-4 h-4 text-muted" />Retry</button>}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -187,29 +210,76 @@ export default function PayoutsPage() {
                   <p>Requested: {formatDate(p.scheduledAt)}</p>
                   {p.completedAt && <p>Completed: {formatDateTime(p.completedAt)}</p>}
                 </div>
-                {p.status === "scheduled" && (
+                <div className="flex gap-2 mt-1">
                   <button
-                    onClick={() => act(p._id, "process")}
-                    disabled={actingId === p._id}
-                    className="w-full mt-1 px-3 py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50"
+                    onClick={() => setDetail(p)}
+                    className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-card border border-border text-muted hover:text-foreground transition-colors"
                   >
-                    {actingId === p._id ? "Processing..." : "Process Payout"}
+                    View details
                   </button>
-                )}
-                {p.status === "failed" && (
-                  <button
-                    onClick={() => act(p._id, "retry")}
-                    disabled={actingId === p._id}
-                    className="w-full mt-1 px-3 py-2 rounded-lg text-xs font-medium bg-card border border-border disabled:opacity-50"
-                  >
-                    {actingId === p._id ? "Retrying..." : "Retry Payout"}
-                  </button>
-                )}
+                  {p.status === "scheduled" && (
+                    <button
+                      onClick={() => act(p._id, "process")}
+                      disabled={actingId === p._id}
+                      className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50"
+                    >
+                      {actingId === p._id ? "Processing..." : "Process"}
+                    </button>
+                  )}
+                  {p.status === "failed" && (
+                    <button
+                      onClick={() => act(p._id, "retry")}
+                      disabled={actingId === p._id}
+                      className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-card border border-border disabled:opacity-50"
+                    >
+                      {actingId === p._id ? "Retrying..." : "Retry"}
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </>
       )}
+
+      {/* Details modal */}
+      <Modal open={detail !== null} onClose={() => setDetail(null)} title="Payout Details">
+        {detail && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <StatusBadge status={detail.status} />
+              <span className="text-lg font-semibold">{formatCurrency(detail.amount)}</span>
+            </div>
+            <div className="bg-background border border-border rounded-2xl divide-y divide-border">
+              <DetailRow label="Worker" value={detail.customerName} />
+              <DetailRow label="Amount" value={formatCurrency(detail.amount)} bold />
+              <DetailRow label="Destination" value={detail.destination} />
+              <DetailRow label="Requested" value={formatDate(detail.scheduledAt)} />
+              <DetailRow label="Completed" value={detail.completedAt ? formatDateTime(detail.completedAt) : "—"} />
+              {detail.squarePayoutId && <DetailRow label="Square payout ID" value={detail.squarePayoutId} mono />}
+              <DetailRow label="Payout ID" value={detail._id} mono />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              {detail.status === "scheduled" && (
+                <button onClick={() => { act(detail._id, "process"); setDetail(null); }} className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">Process</button>
+              )}
+              {detail.status === "failed" && (
+                <button onClick={() => { act(detail._id, "retry"); setDetail(null); }} className="px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-medium hover:bg-background transition-colors">Retry</button>
+              )}
+              <button onClick={() => setDetail(null)} className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium text-muted hover:text-foreground transition-colors">Close</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+function DetailRow({ label, value, mono, bold }: { label: string; value: string; mono?: boolean; bold?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-4 px-4 py-3">
+      <span className="text-sm text-muted shrink-0">{label}</span>
+      <span className={`text-sm text-right break-all ${mono ? "font-mono text-xs" : ""} ${bold ? "font-semibold" : "font-medium"}`}>{value}</span>
     </div>
   );
 }
