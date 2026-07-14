@@ -39,6 +39,12 @@ declare global {
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
+}
+
 function loadSquareSdk(environment: string): Promise<any> {
   const url =
     environment === "production"
@@ -109,7 +115,8 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
       ? Math.round((amount * (rates.percentageFee / 100) + rates.flatFee) * 100) /
         100
       : null;
-  const estTotal = estFee !== null ? Math.round((amount + estFee) * 100) / 100 : null;
+  const estTotal =
+    estFee !== null ? Math.round((amount + estFee) * 100) / 100 : null;
 
   const pickPreset = (v: number) => {
     setAmount(v);
@@ -139,9 +146,7 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Couldn't start the payment.");
       if (!data.square?.applicationId || !data.square?.locationId) {
-        throw new Error(
-          "Card payments aren't configured for this recipient yet."
-        );
+        throw new Error("Card payments aren't configured for this recipient yet.");
       }
       setQuote(data as Quote);
       setStep("card");
@@ -166,16 +171,22 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
           quote.square.applicationId,
           quote.square.locationId
         );
-        const card = await payments.card();
+        const card = await payments.card({
+          style: {
+            input: { fontSize: "16px", color: "#111827" },
+            ".input-container": { borderRadius: "14px", borderColor: "#E5E7EB" },
+            ".input-container.is-focus": { borderColor: "#E23744" },
+            ".input-container.is-error": { borderColor: "#DC2626" },
+            ".message-text.is-error": { color: "#DC2626" },
+          },
+        });
         if (cancelled) return;
         await card.attach("#card-container");
         cardRef.current = card;
         setCardReady(true);
       } catch (e) {
         if (!cancelled) {
-          setError(
-            e instanceof Error ? e.message : "Couldn't load the card form."
-          );
+          setError(e instanceof Error ? e.message : "Couldn't load the card form.");
         }
       }
     })();
@@ -216,182 +227,268 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
   /* ---------------- success ---------------- */
   if (step === "success" && quote) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-8 text-center">
-        <div className="w-16 h-16 rounded-full bg-success-light text-success text-3xl font-bold mx-auto mb-5 flex items-center justify-center">
-          ✓
-        </div>
-        <h1 className="text-xl font-extrabold mb-1">Thank you!</h1>
-        <p className="text-sm text-muted mb-6">
-          Your {money(quote.amount)} tip is on its way to {quote.customerName}.
-        </p>
-        <div className="bg-background border border-border rounded-xl p-4 text-sm space-y-2">
-          <Row label="Tip" value={money(quote.amount)} />
-          <Row label="Processing fee" value={money(quote.fee)} />
-          <div className="border-t border-border pt-2">
-            <Row label="Total charged" value={money(quote.totalCharged)} bold />
+      <>
+        <Card>
+          <div className="px-5 sm:px-7 pt-8 sm:pt-9 pb-7 sm:pb-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-[#ECFDF5] mx-auto mb-5 flex items-center justify-center ring-8 ring-[#ECFDF5]/60">
+              <svg
+                viewBox="0 0 24 24"
+                className="w-8 h-8 text-[#059669]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </div>
+            <h1 className="text-2xl sm:text-[26px] font-extrabold tracking-tight text-[#111827]">
+              Thank you!
+            </h1>
+            <p className="text-[15px] text-[#6B7280] mt-2 leading-relaxed">
+              Your <span className="font-semibold text-[#111827]">
+                {money(quote.amount)}
+              </span>{" "}
+              tip is on its way to {quote.customerName}.
+            </p>
+
+            <div className="mt-7 rounded-2xl bg-[#F9FAFB] border border-[#F0F1F3] p-4 text-left">
+              <Row label="Tip" value={money(quote.amount)} />
+              <Row label="Processing fee" value={money(quote.fee)} />
+              <Divider />
+              <Row label="Total charged" value={money(quote.totalCharged)} bold />
+            </div>
+
+            <p className="text-xs text-[#9CA3AF] mt-6 leading-relaxed">
+              You can close this page — no receipt email needed.
+            </p>
           </div>
-        </div>
-        <p className="text-xs text-muted mt-6">
-          A receipt was sent to your card issuer. You can close this page.
-        </p>
-      </div>
+        </Card>
+        <Footer />
+      </>
     );
   }
 
   /* ---------------- card ---------------- */
   if (step === "card" && quote) {
     return (
-      <div>
-        <Header name={quote.customerName || recipientName} />
+      <>
+        <Card>
+          <Hero name={quote.customerName || recipientName} />
 
-        <div className="bg-card border border-border rounded-2xl p-5 mb-4">
-          <div className="text-sm space-y-2">
-            <Row label="Tip" value={money(quote.amount)} />
-            <Row
-              label={`Processing fee (${quote.percentageFee}% + ${money(
-                quote.flatFee
-              )})`}
-              value={money(quote.fee)}
-            />
-            <div className="border-t border-border pt-2">
+          <div className="px-5 sm:px-7 pb-6 sm:pb-7">
+            <div className="rounded-2xl bg-[#F9FAFB] border border-[#F0F1F3] p-4">
+              <Row label="Tip" value={money(quote.amount)} />
+              <Row
+                label={`Fee (${quote.percentageFee}% + ${money(quote.flatFee)})`}
+                value={money(quote.fee)}
+              />
+              <Divider />
               <Row label="You pay" value={money(quote.totalCharged)} bold />
             </div>
-          </div>
-          <p className="text-xs text-muted mt-3">
-            {quote.customerName} receives the full {money(quote.amount)}.
-          </p>
-        </div>
 
-        <div className="bg-card border border-border rounded-2xl p-5">
-          <div id="card-container" className="min-h-[110px]" />
-          {!cardReady && !error && (
-            <p className="text-sm text-muted text-center py-4">
-              Loading secure card form…
+            <p className="text-xs text-[#6B7280] mt-3 text-center">
+              {quote.customerName} receives the full{" "}
+              <span className="font-semibold text-[#111827]">
+                {money(quote.amount)}
+              </span>
+              .
             </p>
-          )}
 
-          {error && (
-            <div className="bg-danger-light border border-danger/20 text-danger text-sm rounded-xl p-3 mt-3">
-              {error}
+            <div className="mt-6">
+              <div id="card-container" className="min-h-[100px]" />
+              {!cardReady && !error && (
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-[#9CA3AF]">
+                  <Spinner />
+                  Loading secure card form…
+                </div>
+              )}
             </div>
-          )}
 
-          <button
-            onClick={pay}
-            disabled={!cardReady || busy}
-            className="w-full mt-4 py-3.5 rounded-xl bg-accent text-white font-bold disabled:opacity-50 transition-opacity"
-          >
-            {busy ? "Processing…" : `Pay ${money(quote.totalCharged)}`}
-          </button>
+            {error && <ErrorBox>{error}</ErrorBox>}
 
-          <button
-            onClick={() => {
-              setStep("amount");
-              setQuote(null);
-              setError(null);
-              setCardReady(false);
-              attachedRef.current = false;
-              cardRef.current = null;
-            }}
-            disabled={busy}
-            className="w-full mt-2 py-2 text-sm text-muted font-medium disabled:opacity-50"
-          >
-            Change amount
-          </button>
+            <PrimaryButton
+              onClick={pay}
+              disabled={!cardReady || busy}
+              busy={busy}
+            >
+              {busy ? "Processing…" : `Pay ${money(quote.totalCharged)}`}
+            </PrimaryButton>
 
-          <p className="text-[11px] text-muted text-center mt-3 leading-relaxed">
-            Card details go straight to Square. lovetap.me never sees your card
-            number.
-          </p>
-        </div>
-
-        <p className="text-center text-xs text-muted mt-6">
-          Secured by Square · lovetap.me
-        </p>
-      </div>
+            <button
+              onClick={() => {
+                setStep("amount");
+                setQuote(null);
+                setError(null);
+                setCardReady(false);
+                attachedRef.current = false;
+                cardRef.current = null;
+              }}
+              disabled={busy}
+              className="w-full mt-2.5 py-2 text-sm font-semibold text-[#9CA3AF] hover:text-[#6B7280] transition-colors disabled:opacity-50"
+            >
+              Change amount
+            </button>
+          </div>
+        </Card>
+        <Footer />
+      </>
     );
   }
 
   /* ---------------- amount ---------------- */
   return (
-    <div>
-      <Header name={recipientName} />
+    <>
+      <Card>
+        <Hero name={recipientName} />
 
-      <div className="bg-card border border-border rounded-2xl p-5">
-        <p className="text-sm font-semibold mb-3">Choose a tip</p>
+        <div className="px-5 sm:px-7 pb-6 sm:pb-7">
+          <div className="grid grid-cols-4 gap-2 sm:gap-2.5">
+            {PRESETS.map((v) => {
+              const active = amount === v && !custom;
+              return (
+                <button
+                  key={v}
+                  onClick={() => pickPreset(v)}
+                  className={`h-[50px] sm:h-[52px] rounded-xl sm:rounded-2xl text-sm sm:text-[15px] font-bold transition-all active:scale-95 ${
+                    active
+                      ? "bg-gradient-to-b from-[#F0714B] to-[#E23744] text-white shadow-lg shadow-[#E23744]/25"
+                      : "bg-[#F9FAFB] text-[#111827] border border-[#EDEFF2] hover:border-[#F0714B]/50 hover:bg-white"
+                  }`}
+                >
+                  ${v}
+                </button>
+              );
+            })}
+          </div>
 
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          {PRESETS.map((v) => (
-            <button
-              key={v}
-              onClick={() => pickPreset(v)}
-              className={`py-3 rounded-xl border text-sm font-bold transition-colors ${
-                amount === v && !custom
-                  ? "bg-accent border-accent text-white"
-                  : "bg-background border-border text-foreground hover:border-accent/40"
-              }`}
-            >
-              ${v}
-            </button>
-          ))}
-        </div>
+          <div className="relative my-4 flex items-center gap-3">
+            <div className="h-px flex-1 bg-[#F0F1F3]" />
+            <span className="text-[11px] font-medium uppercase tracking-wider text-[#C4C8CE]">
+              or
+            </span>
+            <div className="h-px flex-1 bg-[#F0F1F3]" />
+          </div>
 
-        <label className="block text-sm font-semibold mb-2">Or enter an amount</label>
-        <div className="relative mb-4">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted font-semibold">
-            $
-          </span>
-          <input
-            value={custom}
-            onChange={(e) => onCustom(e.target.value)}
-            inputMode="decimal"
-            placeholder="0.00"
-            className="w-full pl-8 pr-4 py-3 bg-background border border-border rounded-xl text-base font-semibold focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-          />
-        </div>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[17px] font-bold text-[#C4C8CE] pointer-events-none">
+              $
+            </span>
+            <input
+              value={custom}
+              onChange={(e) => onCustom(e.target.value)}
+              inputMode="decimal"
+              placeholder="Enter amount"
+              className="w-full h-[52px] pl-9 pr-4 bg-[#F9FAFB] border border-[#EDEFF2] rounded-2xl text-[17px] font-bold text-[#111827] placeholder:font-medium placeholder:text-[#C4C8CE] focus:outline-none focus:border-[#E23744] focus:bg-white focus:ring-4 focus:ring-[#E23744]/10 transition-all"
+            />
+          </div>
 
-        {amount > 0 && estTotal !== null && (
-          <div className="bg-background border border-border rounded-xl p-4 text-sm space-y-2 mb-4">
-            <Row label="Tip" value={money(amount)} />
-            <Row label="Processing fee" value={money(estFee!)} />
-            <div className="border-t border-border pt-2">
+          {amount > 0 && estTotal !== null && (
+            <div className="mt-4 rounded-2xl bg-[#FFF7F5] border border-[#FBE3DB] p-4">
+              <Row label="Tip" value={money(amount)} />
+              <Row label="Processing fee" value={money(estFee!)} />
+              <Divider tone="warm" />
               <Row label="You pay" value={money(estTotal)} bold />
             </div>
-          </div>
-        )}
+          )}
 
-        {error && (
-          <div className="bg-danger-light border border-danger/20 text-danger text-sm rounded-xl p-3 mb-4">
-            {error}
-          </div>
-        )}
+          {error && <ErrorBox>{error}</ErrorBox>}
 
-        <button
-          onClick={startPayment}
-          disabled={amount <= 0 || busy}
-          className="w-full py-3.5 rounded-xl bg-accent text-white font-bold disabled:opacity-50 transition-opacity"
-        >
-          {busy ? "Please wait…" : amount > 0 ? `Tip ${money(amount)}` : "Enter an amount"}
-        </button>
+          <PrimaryButton
+            onClick={startPayment}
+            disabled={amount <= 0 || busy}
+            busy={busy}
+          >
+            {busy
+              ? "Please wait…"
+              : amount > 0
+              ? `Tip ${money(amount)}`
+              : "Enter an amount"}
+          </PrimaryButton>
 
-        <p className="text-[11px] text-muted text-center mt-3">
-          No app or account needed.
-        </p>
-      </div>
+          <p className="text-[11px] text-[#9CA3AF] text-center mt-3">
+            No app or account needed.
+          </p>
+        </div>
+      </Card>
+      <Footer />
+    </>
+  );
+}
 
-      <p className="text-center text-xs text-muted mt-6">
-        Secured by Square · lovetap.me
-      </p>
+/* ---------------- presentational bits ---------------- */
+
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-3xl sm:rounded-[28px] overflow-hidden shadow-[0_24px_70px_-12px_rgba(0,0,0,0.45)]">
+      {children}
     </div>
   );
 }
 
-function Header({ name }: { name: string }) {
+function Hero({ name }: { name: string }) {
   return (
-    <div className="text-center mb-6">
-      <p className="text-sm text-muted">You&apos;re tipping</p>
-      <h1 className="text-2xl font-extrabold mt-1">{name}</h1>
+    <div className="px-5 sm:px-7 pt-7 sm:pt-8 pb-5 sm:pb-6 text-center">
+      <div className="w-[60px] h-[60px] rounded-full mx-auto mb-4 flex items-center justify-center text-white text-[19px] font-extrabold tracking-wide bg-gradient-to-br from-[#F0714B] to-[#E23744] shadow-lg shadow-[#E23744]/25">
+        {initials(name)}
+      </div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#C4C8CE]">
+        You&apos;re tipping
+      </p>
+      <h1 className="text-[22px] sm:text-[27px] leading-tight font-extrabold tracking-tight text-[#111827] mt-1.5 break-words">
+        {name}
+      </h1>
     </div>
+  );
+}
+
+function PrimaryButton({
+  children,
+  onClick,
+  disabled,
+  busy,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  busy?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full h-[54px] mt-5 rounded-2xl text-white text-[16px] font-bold bg-gradient-to-b from-[#F0714B] to-[#E23744] shadow-lg shadow-[#E23744]/30 transition-all active:scale-[0.98] enabled:hover:brightness-105 disabled:opacity-40 disabled:shadow-none flex items-center justify-center gap-2"
+    >
+      {busy && <Spinner light />}
+      {children}
+    </button>
+  );
+}
+
+function Spinner({ light }: { light?: boolean }) {
+  return (
+    <span
+      className={`inline-block w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin ${
+        light ? "text-white/80" : "text-[#C4C8CE]"
+      }`}
+    />
+  );
+}
+
+function ErrorBox({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-4 rounded-2xl bg-[#FEF2F2] border border-[#FECACA] px-4 py-3 text-sm text-[#B91C1C] leading-relaxed">
+      {children}
+    </div>
+  );
+}
+
+function Divider({ tone }: { tone?: "warm" }) {
+  return (
+    <div
+      className={`my-2.5 h-px ${tone === "warm" ? "bg-[#FBE3DB]" : "bg-[#EDEFF2]"}`}
+    />
   );
 }
 
@@ -405,9 +502,47 @@ function Row({
   bold?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className={bold ? "font-bold" : "text-muted"}>{label}</span>
-      <span className={bold ? "font-extrabold" : "font-semibold"}>{value}</span>
+    <div className="flex items-center justify-between gap-3 py-0.5">
+      <span
+        className={
+          bold
+            ? "text-[15px] font-bold text-[#111827]"
+            : "text-[14px] text-[#6B7280]"
+        }
+      >
+        {label}
+      </span>
+      <span
+        className={
+          bold
+            ? "text-[17px] font-extrabold text-[#111827] tabular-nums"
+            : "text-[14px] font-semibold text-[#111827] tabular-nums"
+        }
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function Footer() {
+  return (
+    <div className="flex items-center justify-center gap-1.5 mt-5">
+      <svg
+        viewBox="0 0 24 24"
+        className="w-3.5 h-3.5 text-white/70"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect x="3" y="11" width="18" height="11" rx="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+      <p className="text-xs font-medium text-white/70">
+        Secured by Square · lovetap.me
+      </p>
     </div>
   );
 }
