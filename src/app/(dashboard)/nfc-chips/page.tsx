@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Link2, Unlink, Layers, Download, MoreHorizontal, Eye, Trash2, Power, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Link2, Unlink, Layers, Download, MoreHorizontal, Eye, Trash2, Power, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDate } from "@/lib/utils";
@@ -13,6 +13,47 @@ type Batch = { batchId: string; total: number; claimed: number; unclaimed: numbe
 
 const filterOptions = ["all", "active", "unassigned", "assigned", "disabled"];
 const PAGE_SIZE = 20;
+
+// The URL to program onto a physical chip. Prefer the configured public origin
+// so the value shown here is the one that gets burned onto the tag — chips are
+// locked read-only, so it must not vary with whatever host the admin is on.
+function tapUrlFor(chipUid: string): string {
+  const base = (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "")
+  ).replace(/\/+$/, "");
+  return `${base}/t/${encodeURIComponent(chipUid)}`;
+}
+
+function CopyUrl({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      return; // clipboard blocked (insecure origin) — leave the text selectable
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      onClick={copy}
+      title={url}
+      className="group flex items-center gap-1.5 max-w-[260px] text-left"
+    >
+      <span className="font-mono text-xs text-muted truncate group-hover:text-foreground transition-colors">
+        {url.replace(/^https?:\/\//, "")}
+      </span>
+      {copied ? (
+        <Check className="w-3.5 h-3.5 text-success shrink-0" />
+      ) : (
+        <Copy className="w-3.5 h-3.5 text-muted shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+      )}
+    </button>
+  );
+}
 
 export default function NfcChipsPage() {
   const router = useRouter();
@@ -156,6 +197,7 @@ export default function NfcChipsPage() {
         <div className="hidden md:block bg-card rounded-2xl border border-border overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-sm">
           <thead><tr className="border-b border-border bg-background/50">
             <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Chip UID</th>
+            <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Tap URL</th>
             <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Customer</th>
             <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Status</th>
             <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Registered</th>
@@ -164,6 +206,7 @@ export default function NfcChipsPage() {
           <tbody className="divide-y divide-border">{chips.map(chip => (
             <tr key={chip._id} className="hover:bg-background/50 transition-colors">
               <td className="px-5 py-3 font-mono text-xs">{chip.chipUid}</td>
+              <td className="px-5 py-3"><CopyUrl url={tapUrlFor(chip.chipUid)} /></td>
               <td className="px-5 py-3">{chip.customerName ? <span className="font-medium">{chip.customerName}</span> : <span className="text-muted italic">Unassigned</span>}</td>
               <td className="px-5 py-3"><StatusBadge status={chip.status} /></td>
               <td className="px-5 py-3 text-muted whitespace-nowrap">{formatDate(chip.registeredAt)}</td>
@@ -173,7 +216,7 @@ export default function NfcChipsPage() {
         </table></div></div>
 
         {/* Mobile cards */}
-        <div className="md:hidden space-y-3">{chips.map(chip => <div key={chip._id} className="bg-card rounded-2xl border border-border p-4 space-y-3"><div className="flex items-center justify-between"><span className="font-mono text-xs">{chip.chipUid}</span><StatusBadge status={chip.status} /></div><div className="flex items-center justify-between"><div>{chip.customerName ? <p className="text-sm font-medium">{chip.customerName}</p> : <p className="text-sm text-muted italic">Unassigned</p>}<p className="text-xs text-muted mt-0.5">Registered {formatDate(chip.registeredAt)}</p></div>{actionsMenu(chip)}</div></div>)}</div>
+        <div className="md:hidden space-y-3">{chips.map(chip => <div key={chip._id} className="bg-card rounded-2xl border border-border p-4 space-y-3"><div className="flex items-center justify-between"><span className="font-mono text-xs">{chip.chipUid}</span><StatusBadge status={chip.status} /></div><CopyUrl url={tapUrlFor(chip.chipUid)} /><div className="flex items-center justify-between"><div>{chip.customerName ? <p className="text-sm font-medium">{chip.customerName}</p> : <p className="text-sm text-muted italic">Unassigned</p>}<p className="text-xs text-muted mt-0.5">Registered {formatDate(chip.registeredAt)}</p></div>{actionsMenu(chip)}</div></div>)}</div>
 
         {/* Pagination */}
         <div className="flex items-center justify-between gap-3 flex-wrap">

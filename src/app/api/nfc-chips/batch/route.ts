@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import NfcChip from "@/lib/models/NfcChip";
 import { generateUniqueChipCodes } from "@/lib/chipCode";
+import { getAppOrigin, tapUrl } from "@/lib/appUrl";
 
 // POST /api/nfc-chips/batch
 // Generates a batch of unclaimed chip codes. These codes are printed/encoded
@@ -93,11 +94,16 @@ export async function GET(req: NextRequest) {
     .lean();
 
   if (format === "csv") {
-    const header = "chip_code,claimed,claimed_at,customer";
+    // tap_url is the value to actually write onto each physical chip — the
+    // bare code alone isn't enough to program one.
+    const origin = getAppOrigin(req);
+    const header = "chip_code,tap_url,claimed,claimed_at,customer";
     const rows = chips.map((c) => {
       const claimedAt = c.claimedAt ? new Date(c.claimedAt).toISOString() : "";
       const customer = (c.customerName || "").replace(/"/g, '""');
-      return `${c.chipUid},${c.claimed ? "yes" : "no"},${claimedAt},"${customer}"`;
+      return `${c.chipUid},${tapUrl(origin, c.chipUid)},${
+        c.claimed ? "yes" : "no"
+      },${claimedAt},"${customer}"`;
     });
     const csv = [header, ...rows].join("\n");
     return new NextResponse(csv, {
