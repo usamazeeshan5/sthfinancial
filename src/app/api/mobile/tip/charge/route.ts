@@ -76,14 +76,26 @@ export async function POST(req: NextRequest) {
     environment: isSandbox ? SquareEnvironment.Sandbox : SquareEnvironment.Production,
   });
 
+  const totalCents = BigInt(Math.round(txn.totalCharged * 100));
+
+  // Platform fee → Square's app_fee_money, which routes this slice of the
+  // seller's proceeds to the PLATFORM's Square account. Only applied when
+  // configured, and never so large it would exceed the payment total (Square
+  // rejects that outright).
+  const appFeeCents = BigInt(Math.round((txn.platformFee || 0) * 100));
+  const collectAppFee = appFeeCents > BigInt(0) && appFeeCents < totalCents;
+
   try {
     const response = await sellerClient.payments.create({
       sourceId,
       idempotencyKey: randomUUID(),
       amountMoney: {
-        amount: BigInt(Math.round(txn.totalCharged * 100)),
+        amount: totalCents,
         currency: "USD",
       },
+      ...(collectAppFee
+        ? { appFeeMoney: { amount: appFeeCents, currency: "USD" } }
+        : {}),
       locationId: recipient.squareLocationId,
       referenceId: quoteId,
       note: `Tip for ${txn.customerName || recipient.name || "recipient"}`,

@@ -63,6 +63,16 @@ export async function POST(req: NextRequest) {
     ) / 100;
   const totalCharged = Math.round((amount + fee) * 100) / 100;
 
+  // Platform fee (the operator's own cut), computed on the tip amount and
+  // collected via Square's app_fee_money at charge time. Comes out of the
+  // processing fee margin — it is NOT added on top of what the tipper pays.
+  const platformFee =
+    Math.round(
+      (amount * ((feeConfig.platformPercentageFee || 0) / 100) +
+        (feeConfig.platformFlatFee || 0)) *
+        100
+    ) / 100;
+
   const quoteId = randomUUID();
 
   await Transaction.create({
@@ -71,6 +81,7 @@ export async function POST(req: NextRequest) {
     amount,
     fee,
     totalCharged,
+    platformFee,
     status: "quoted",
     quoteId,
   });

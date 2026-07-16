@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import Customer from "@/lib/models/Customer";
 import NfcChip from "@/lib/models/NfcChip";
 import { generateUniqueChipCode } from "@/lib/generateUniqueChipCode";
+import { assignChipCode } from "@/lib/assignChipCode";
 
 export async function GET(req: NextRequest) {
   await connectDB();
@@ -36,11 +37,32 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   await connectDB();
   const body = await req.json();
-  const { name, email, phone, password } = body;
+  const { name, email, phone, password, chipCode } = body;
 
   const existing = await Customer.findOne({ email });
   if (existing) {
     return NextResponse.json({ error: "Email already exists" }, { status: 400 });
+  }
+
+  // When an explicit code is supplied, validate it BEFORE creating the customer
+  // so a bad/taken code doesn't leave a half-created account behind.
+  const wantedCode = typeof chipCode === "string" ? chipCode.trim() : "";
+  if (wantedCode) {
+    const target = await NfcChip.findOne({
+      chipUid: new RegExp(`^${wantedCode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"),
+    });
+    if (!target) {
+      return NextResponse.json(
+        { error: `No chip found with code "${wantedCode}". Generate it in a batch first.` },
+        { status: 404 }
+      );
+    }
+    if (target.customerId) {
+      return NextResponse.json(
+        { error: `Chip "${target.chipUid}" is already assigned.` },
+        { status: 409 }
+      );
+    }
   }
 
   const hashedPassword = await bcrypt.hash(password || "default123", 12);
@@ -51,18 +73,31 @@ export async function POST(req: NextRequest) {
     password: hashedPassword,
   });
 
-  // Auto-generate a chip code and link it to the new customer — same behaviour
-  // as mobile self-signup, so every customer has a chip from creation.
-  const chipUid = await generateUniqueChipCode();
-  await NfcChip.create({
-    chipUid,
-    customerId: customer._id,
-    customerName: customer.name,
-    claimed: true,
-    claimedAt: new Date(),
-    batchId: "admin",
-    status: "active",
-  });
+  let chipUid: string;
+  if (wantedCode) {
+    // Claim the requested batch code for this customer.
+    const result = await assignChipCode(wantedCode, customer._id.toString(), customer.name);
+    if (!result.ok) {
+      // Extremely unlikely (validated above) — roll back the customer so we
+      // don't strand an account with no chip.
+      await customer.deleteOne();
+      return NextResponse.json({ error: result.error }, { status: result.status });
+    }
+    chipUid = result.chipUid;
+  } else {
+    // No code supplied — auto-generate one, same as mobile self-signup, so
+    // every customer still has a chip from creation.
+    chipUid = await generateUniqueChipCode();
+    await NfcChip.create({
+      chipUid,
+      customerId: customer._id,
+      customerName: customer.name,
+      claimed: true,
+      claimedAt: new Date(),
+      batchId: "admin",
+      status: "active",
+    });
+  }
 
   const { password: _, ...customerData } = customer.toObject();
   return NextResponse.json({ ...customerData, chipCode: chipUid }, { status: 201 });

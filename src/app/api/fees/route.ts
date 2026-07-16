@@ -13,16 +13,20 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   await connectDB();
-  const { flatFee, percentageFee } = await req.json();
+  const body = await req.json();
+  const { flatFee, percentageFee, platformPercentageFee, platformFlatFee } = body;
 
   let config = await FeeConfig.findOne();
-  if (!config) {
-    config = await FeeConfig.create({ flatFee, percentageFee });
-  } else {
-    config.flatFee = flatFee;
-    config.percentageFee = percentageFee;
-    await config.save();
-  }
+  if (!config) config = await FeeConfig.create({});
+
+  if (flatFee !== undefined) config.flatFee = flatFee;
+  if (percentageFee !== undefined) config.percentageFee = percentageFee;
+  // Platform fee is optional — only update when the field is present so an
+  // older client that doesn't send it doesn't reset it to 0.
+  if (platformPercentageFee !== undefined)
+    config.platformPercentageFee = platformPercentageFee;
+  if (platformFlatFee !== undefined) config.platformFlatFee = platformFlatFee;
+  await config.save();
 
   return NextResponse.json(config);
 }

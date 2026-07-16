@@ -109,9 +109,6 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
 
-          <p className="text-xs text-center text-muted">
-            Demo: admin@lovetap.me / admin123
-          </p>
         </form>
       </div>
     </div>

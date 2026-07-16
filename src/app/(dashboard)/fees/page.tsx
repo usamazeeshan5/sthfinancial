@@ -6,6 +6,8 @@ import { formatCurrency, formatDateTime } from "@/lib/utils";
 export default function FeesPage() {
   const [flatFee, setFlatFee] = useState("0.30");
   const [percentageFee, setPercentageFee] = useState("3.9");
+  const [platformPercentageFee, setPlatformPercentageFee] = useState("0");
+  const [platformFlatFee, setPlatformFlatFee] = useState("0");
   const [lastUpdated, setLastUpdated] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -14,13 +16,15 @@ export default function FeesPage() {
     fetch("/api/fees").then(r => r.json()).then(d => {
       setFlatFee(d.flatFee.toString());
       setPercentageFee(d.percentageFee.toString());
+      setPlatformPercentageFee((d.platformPercentageFee ?? 0).toString());
+      setPlatformFlatFee((d.platformFlatFee ?? 0).toString());
       setLastUpdated(d.updatedAt);
     });
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
-    const res = await fetch("/api/fees", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ flatFee: parseFloat(flatFee), percentageFee: parseFloat(percentageFee) }) });
+    const res = await fetch("/api/fees", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ flatFee: parseFloat(flatFee), percentageFee: parseFloat(percentageFee), platformPercentageFee: parseFloat(platformPercentageFee || "0"), platformFlatFee: parseFloat(platformFlatFee || "0") }) });
     const d = await res.json();
     setLastUpdated(d.updatedAt);
     setSaving(false);
@@ -31,6 +35,7 @@ export default function FeesPage() {
   const previewAmount = 25.0;
   const calculatedFee = parseFloat(flatFee || "0") + (previewAmount * parseFloat(percentageFee || "0")) / 100;
   const totalCharged = previewAmount + calculatedFee;
+  const platformCut = parseFloat(platformFlatFee || "0") + (previewAmount * parseFloat(platformPercentageFee || "0")) / 100;
 
   return (
     <div className="space-y-6">
@@ -42,6 +47,16 @@ export default function FeesPage() {
             <div><label className="block text-sm text-muted mb-1.5">Flat Fee (per transaction)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">$</span><input type="number" step="0.01" min="0" value={flatFee} onChange={e => setFlatFee(e.target.value)} className="w-full pl-7 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent" /></div></div>
             <div><label className="block text-sm text-muted mb-1.5">Percentage Fee</label><div className="relative"><input type="number" step="0.1" min="0" max="100" value={percentageFee} onChange={e => setPercentageFee(e.target.value)} className="w-full pl-4 pr-8 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted">%</span></div></div>
           </div>
+
+          <div className="pt-2 border-t border-border">
+            <h2 className="text-sm font-medium">Platform Fee <span className="text-xs font-normal text-muted">— your cut</span></h2>
+            <p className="text-xs text-muted mt-1 mb-4">Taken from each payment and paid to your own Square account. Comes out of the processing fee above — it is <span className="font-medium text-foreground">not</span> added on top for the tipper. Leave at 0 to collect nothing. <span className="font-medium text-foreground">65 bps = 0.65%.</span></p>
+            <div className="space-y-4">
+              <div><label className="block text-sm text-muted mb-1.5">Platform Percentage</label><div className="relative"><input type="number" step="0.05" min="0" max="100" value={platformPercentageFee} onChange={e => setPlatformPercentageFee(e.target.value)} className="w-full pl-4 pr-8 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted">%</span></div></div>
+              <div><label className="block text-sm text-muted mb-1.5">Platform Flat Fee (per transaction)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted">$</span><input type="number" step="0.01" min="0" value={platformFlatFee} onChange={e => setPlatformFlatFee(e.target.value)} className="w-full pl-7 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent" /></div></div>
+            </div>
+          </div>
+
           <button onClick={handleSave} disabled={saving} className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">{saved ? "Saved!" : saving ? "Saving..." : "Save Changes"}</button>
           {lastUpdated && <p className="text-xs text-muted">Last updated: {formatDateTime(lastUpdated)}</p>}
         </div>
@@ -55,7 +70,10 @@ export default function FeesPage() {
               <div className="flex items-center justify-between text-sm"><span className="text-muted">Processing Fee</span><span>{formatCurrency(calculatedFee)}</span></div>
               <div className="flex items-center justify-between text-sm font-semibold pt-2 border-t border-border"><span>Total Charged</span><span>{formatCurrency(totalCharged)}</span></div>
             </div>
-            <div className="text-center"><p className="text-xs text-muted">{formatCurrency(previewAmount)} goes to the recipient &middot; Fees paid by tipper</p></div>
+            {platformCut > 0 && (
+              <div className="flex items-center justify-between text-sm pt-2 border-t border-border"><span className="text-muted">Your platform cut</span><span className="font-medium text-accent">{formatCurrency(platformCut)}</span></div>
+            )}
+            <div className="text-center"><p className="text-xs text-muted">{formatCurrency(previewAmount)} goes to the recipient &middot; Fees paid by tipper{platformCut > 0 ? ` · you keep ${formatCurrency(platformCut)}` : ""}</p></div>
           </div>
         </div>
       </div>
