@@ -97,6 +97,13 @@ export async function POST(req: NextRequest) {
         ? { appFeeMoney: { amount: appFeeCents, currency: "USD" } }
         : {}),
       locationId: recipient.squareLocationId,
+      // The tipper is entering their own card on our checkout — this is a
+      // customer-initiated, not seller-keyed, payment. Square uses this for
+      // correct pricing/compliance on card-not-present transactions.
+      customerDetails: {
+        customerInitiated: true,
+        sellerKeyedIn: false,
+      },
       referenceId: quoteId,
       note: `Tip for ${txn.customerName || recipient.name || "recipient"}`,
     });

@@ -60,6 +60,10 @@ export async function POST(req: NextRequest) {
     "MERCHANT_PROFILE_READ",
     "PAYMENTS_WRITE",
     "PAYMENTS_READ",
+    // Required so LoveTap can take an application fee (app_fee_money) out of the
+    // worker's payment. Without this scope, Square rejects app-fee charges made
+    // with the worker's OAuth token in production.
+    "PAYMENTS_WRITE_ADDITIONAL_RECIPIENTS",
     "PAYOUTS_READ",
     "BANK_ACCOUNTS_READ",
   ].join(" ");
