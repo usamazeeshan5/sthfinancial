@@ -1,7 +1,6 @@
 import { connectDB } from "@/lib/db";
 import NfcChip from "@/lib/models/NfcChip";
 import TipFlow from "./tip-flow";
-import { LoveTapLockup } from "./mark";
 
 // Public, no-login tip page. This is the URL that gets programmed onto the
 // physical NFC chips: https://<domain>/t/<chipUid>
@@ -70,7 +69,14 @@ function Shell({ children }: { children: React.ReactNode }) {
       />
 
       <div className="relative w-full max-w-[420px] my-auto">
-        <LoveTapLockup className="justify-center mb-5 sm:mb-6" />
+        <div className="flex justify-center mb-5 sm:mb-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.jpeg"
+            alt="LoveTap.Me"
+            className="h-20 sm:h-24 w-auto rounded-2xl shadow-[0_10px_30px_-8px_rgba(0,0,0,0.45)]"
+          />
+        </div>
         {children}
       </div>
     </main>

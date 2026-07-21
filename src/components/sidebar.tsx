@@ -65,11 +65,11 @@ export function Sidebar({
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
           <Link href="/" className="flex items-center gap-2.5">
             <Image
-              src="/lovetap-logo.jpeg"
+              src="/logo.jpeg"
               alt="LoveTap.Me"
-              width={32}
-              height={32}
-              className="rounded-lg"
+              width={40}
+              height={36}
+              className="rounded-lg h-9 w-auto"
             />
             <span className="text-lg font-semibold tracking-tight">
               LoveTap.Me

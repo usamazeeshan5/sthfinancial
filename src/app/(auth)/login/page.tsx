@@ -39,14 +39,14 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <Image
-            src="/lovetap-logo.jpeg"
+            src="/logo.jpeg"
             alt="LoveTap.Me"
-            width={48}
-            height={48}
-            className="rounded-2xl mx-auto mb-4"
+            width={200}
+            height={178}
+            priority
+            className="mx-auto mb-3 h-auto w-[180px] rounded-xl"
           />
-          <h1 className="text-2xl font-semibold tracking-tight">LoveTap.Me</h1>
-          <p className="text-sm text-muted mt-1">
+          <p className="text-sm text-muted">
             Sign in to your admin dashboard
           </p>
         </div>

@@ -4,6 +4,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "lovetap.me Admin",
   description: "Payment processing admin dashboard",
+  icons: {
+    icon: "/logo.jpeg",
+    apple: "/logo.jpeg",
+  },
 };
 
 export default function RootLayout({
