@@ -5,6 +5,9 @@ import { connectDB } from "./db";
 import AdminUser from "./models/AdminUser";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Admin runs on a custom subdomain (adminpanel.lovetap.me) as well as the
+  // apex, so trust the incoming host for auth callback/cookie resolution.
+  trustHost: true,
   providers: [
     Credentials({
       name: "Credentials",
