@@ -9,7 +9,7 @@ export interface ITransaction extends Document {
   // The operator's platform cut for this transaction, collected via Square's
   // app_fee_money. 0 when no platform fee is configured.
   platformFee: number;
-  status: "quoted" | "pending" | "processed" | "deposited" | "failed";
+  status: "quoted" | "pending" | "processed" | "deposited" | "failed" | "refunded" | "disputed";
   quoteId?: string;
   squarePaymentId?: string;
   createdAt: Date;
@@ -29,7 +29,7 @@ const TransactionSchema = new Schema<ITransaction>(
     platformFee: { type: Number, default: 0 },
     status: {
       type: String,
-      enum: ["quoted", "pending", "processed", "deposited", "failed"],
+      enum: ["quoted", "pending", "processed", "deposited", "failed", "refunded", "disputed"],
       default: "quoted",
     },
     quoteId: { type: String, unique: true, sparse: true },

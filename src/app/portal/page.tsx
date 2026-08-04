@@ -3,16 +3,18 @@
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getToken, clearToken, api } from "./auth";
-import { Card, Field, PrimaryButton, ErrorBox, Footer } from "./ui";
+import { Card, Field, PrimaryButton, ErrorBox, Footer, Nav } from "./ui";
 
 type Chip = { id: string; chipUid: string; status: string };
 type Me = { id: string; name: string; email: string };
+const money = (n: number) => `$${(n || 0).toFixed(2)}`;
 
 function HomeInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [me, setMe] = useState<Me | null>(null);
   const [chips, setChips] = useState<Chip[]>([]);
+  const [earnings, setEarnings] = useState<{ total: number; count: number } | null>(null);
   const [square, setSquare] = useState<string>("loading");
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
@@ -30,12 +32,19 @@ function HomeInner() {
     }
     const meData = await meRes.json();
     setMe(meData.user);
-    const [chipsRes, sqRes] = await Promise.all([
+    const [chipsRes, sqRes, dashRes] = await Promise.all([
       api(`/api/mobile/portal/nfc-chips?customerId=${meData.user.id}`),
       api("/api/mobile/portal/square-connect/status"),
+      api(`/api/mobile/portal/dashboard?customerId=${meData.user.id}`),
     ]);
     setChips((await chipsRes.json()).chips || []);
     setSquare((await sqRes.json()).status || "disconnected");
+    const dash = await dashRes.json().catch(() => null);
+    if (dash?.stats)
+      setEarnings({
+        total: dash.stats.totalEarnings ?? 0,
+        count: dash.stats.totalTransactions ?? 0,
+      });
     setLoading(false);
   }, [router]);
 
@@ -97,6 +106,7 @@ function HomeInner() {
 
   return (
     <>
+      <Nav active="home" />
       <Card>
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -107,6 +117,20 @@ function HomeInner() {
             Log out
           </button>
         </div>
+
+        {/* Earnings summary */}
+        {earnings && (
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="rounded-2xl bg-[#F9FAFB] border border-[#F0F1F3] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#C4C8CE]">Total tips</p>
+              <p className="text-2xl font-extrabold text-[#111827] mt-1">{money(earnings.total)}</p>
+            </div>
+            <div className="rounded-2xl bg-[#F9FAFB] border border-[#F0F1F3] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#C4C8CE]">Tips received</p>
+              <p className="text-2xl font-extrabold text-[#111827] mt-1">{earnings.count}</p>
+            </div>
+          </div>
+        )}
 
         {notice && (
           <div className="mb-3 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] px-3.5 py-2.5 text-sm text-[#047857]">

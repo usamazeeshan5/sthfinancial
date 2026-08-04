@@ -268,14 +268,22 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
             </p>
 
             <div className="mt-7 rounded-2xl bg-[#F9FAFB] border border-[#F0F1F3] p-4 text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#C4C8CE] mb-2">
+                Receipt
+              </p>
               <Row label="Tip" value={money(quote.amount)} />
               <Row label="LoveTap service fee" value={money(quote.fee)} />
               <Divider />
               <Row label="Total charged" value={money(quote.totalCharged)} bold />
+              <p className="text-[11px] text-[#9CA3AF] mt-3 font-mono break-all">
+                Ref: {quote.quoteId}
+              </p>
             </div>
 
             <p className="text-xs text-[#9CA3AF] mt-6 leading-relaxed">
-              You can close this page — no receipt email needed.
+              This is your receipt — save or screenshot it for your records.
+              For refund or cancellation requests, contact the LoveTap recipient
+              or support with the reference above.
             </p>
           </div>
         </Card>
@@ -344,6 +352,12 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
             >
               Change amount
             </button>
+
+            <p className="text-[11px] text-[#9CA3AF] text-center mt-3 leading-relaxed">
+              By paying you agree this tip is a one-time charge. Refunds and
+              cancellations are handled through the recipient or LoveTap support.
+              Card details are processed securely by Square.
+            </p>
           </div>
         </Card>
         <Footer />

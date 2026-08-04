@@ -113,3 +113,34 @@ export async function refreshExpiringTokens(withinDays = 7) {
   }
   return { checked: customers.length, refreshed, failures };
 }
+
+// Revokes a seller's Square OAuth authorization (used by "Disconnect Square").
+// After this, LoveTap can no longer charge for the worker until they reconnect.
+export async function revokeCustomerSquareToken(accessToken: string): Promise<RefreshResult> {
+  const applicationId = process.env.SQUARE_APPLICATION_ID;
+  const applicationSecret = process.env.SQUARE_APPLICATION_SECRET;
+  if (!applicationId || !applicationSecret) {
+    return { ok: false, error: "Square OAuth is not configured on the server." };
+  }
+  try {
+    const res = await fetch(`${oauthBase()}/oauth2/revoke`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Square-Version": "2024-12-18",
+        Accept: "application/json",
+        Authorization: `Client ${applicationSecret}`,
+      },
+      body: JSON.stringify({ client_id: applicationId, access_token: accessToken }),
+    });
+    // Even if Square rejects (already-revoked/expired), we still clear locally.
+    if (!res.ok) {
+      const body = await res.text();
+      console.warn("[squareOAuth] revoke non-OK:", res.status, body);
+    }
+    return { ok: true };
+  } catch (e) {
+    console.warn("[squareOAuth] revoke error:", e);
+    return { ok: true }; // clear locally regardless
+  }
+}

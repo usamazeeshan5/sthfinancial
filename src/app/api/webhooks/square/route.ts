@@ -54,6 +54,15 @@ export async function POST(req: NextRequest) {
       case "payout.failed":
         await handlePayoutFailed(event);
         break;
+      case "refund.created":
+      case "refund.updated":
+        await handleRefund(event);
+        break;
+      case "dispute.created":
+      case "dispute.evidence.added":
+      case "dispute.state.changed":
+        await handleDispute(event);
+        break;
       default:
         break;
     }
@@ -138,4 +147,42 @@ async function handlePayoutFailed(event: SquareWebhookEvent) {
     { customerId: record.customerId, status: "deposited" },
     { $set: { status: "processed" } }
   );
+}
+
+// Refund events → mark the matching transaction refunded. Square keeps its
+// processing fee and reverses the application fee proportionally; we record the
+// status so it shows in the worker's Activity and admin Transactions.
+async function handleRefund(event: SquareWebhookEvent) {
+  const refund = event.data.object?.refund as
+    | { id: string; payment_id?: string; status?: string }
+    | undefined;
+  if (!refund?.payment_id) return;
+
+  const txn = await Transaction.findOne({ squarePaymentId: refund.payment_id });
+  if (!txn) {
+    console.warn("refund: no matching transaction for payment", refund.payment_id);
+    return;
+  }
+  // Only COMPLETED refunds flip the status; pending refunds are left as-is.
+  if (!refund.status || refund.status === "COMPLETED") {
+    txn.status = "refunded";
+    await txn.save();
+  }
+}
+
+// Dispute (chargeback) events → flag the transaction as disputed for review.
+async function handleDispute(event: SquareWebhookEvent) {
+  const dispute = event.data.object?.dispute as
+    | { id: string; payment_id?: string; disputed_payment?: { payment_id?: string } }
+    | undefined;
+  const paymentId = dispute?.payment_id || dispute?.disputed_payment?.payment_id;
+  if (!paymentId) return;
+
+  const txn = await Transaction.findOne({ squarePaymentId: paymentId });
+  if (!txn) {
+    console.warn("dispute: no matching transaction for payment", paymentId);
+    return;
+  }
+  txn.status = "disputed";
+  await txn.save();
 }

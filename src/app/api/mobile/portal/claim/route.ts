@@ -3,11 +3,21 @@ import { connectDB } from "@/lib/db";
 import Customer from "@/lib/models/Customer";
 import { verifyToken } from "@/lib/jwt";
 import { assignChipCode } from "@/lib/assignChipCode";
+import { rateLimit, clientIp } from "@/lib/rateLimit";
 
 // POST /api/mobile/portal/claim  { code }
 // The logged-in worker claims an unclaimed chip code and adds it to their
 // account. Used by the web activation flow ("Add this LoveTap to your account").
 export async function POST(req: NextRequest) {
+  // Throttle activation attempts so codes can't be brute-force claimed.
+  const rl = rateLimit(`claim:${clientIp(req)}`, 10, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please wait a moment and try again." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } }
+    );
+  }
+
   const auth = req.headers.get("authorization");
   if (!auth?.startsWith("Bearer ")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

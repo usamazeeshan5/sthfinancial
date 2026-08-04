@@ -57,3 +57,27 @@ export function Footer() {
     <p className="text-center text-xs text-white/70 mt-5">Secured by Square · lovetap.me</p>
   );
 }
+
+// Simple top nav for the worker portal.
+export function Nav({ active }: { active: "home" | "activity" | "profile" }) {
+  const items: { key: string; label: string; href: string }[] = [
+    { key: "home", label: "My LoveTaps", href: "/portal" },
+    { key: "activity", label: "Activity", href: "/portal/transactions" },
+    { key: "profile", label: "Profile", href: "/portal/profile" },
+  ];
+  return (
+    <div className="flex gap-1.5 mb-4 bg-white/15 rounded-2xl p-1.5 backdrop-blur-sm">
+      {items.map((it) => (
+        <a
+          key={it.key}
+          href={it.href}
+          className={`flex-1 text-center text-[13px] font-semibold py-2 rounded-xl transition-colors ${
+            active === it.key ? "bg-white text-[#B0121E]" : "text-white/90 hover:bg-white/10"
+          }`}
+        >
+          {it.label}
+        </a>
+      ))}
+    </div>
+  );
+}
