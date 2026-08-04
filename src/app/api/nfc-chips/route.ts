@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import NfcChip from "@/lib/models/NfcChip";
 import Customer from "@/lib/models/Customer";
+import { normalizeChipCode } from "@/lib/chipCode";
 
 export async function GET(req: NextRequest) {
   await connectDB();
@@ -42,12 +43,22 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   await connectDB();
-  const { chipUid, customerId } = await req.json();
+  const body = await req.json();
+  const { customerId } = body;
 
-  const existing = await NfcChip.findOne({ chipUid });
+  // Normalize custom/manual codes so they match the generated format and the
+  // case-insensitive lookup used everywhere else (LT-XXXXXX, uppercase).
+  const chipUid = normalizeChipCode(String(body.chipUid || ""));
+  if (!chipUid) {
+    return NextResponse.json({ error: "A chip code is required." }, { status: 400 });
+  }
+
+  const existing = await NfcChip.findOne({
+    chipUid: new RegExp(`^${chipUid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"),
+  });
   if (existing) {
     return NextResponse.json(
-      { error: "Chip UID already registered" },
+      { error: `Code "${chipUid}" is already registered.` },
       { status: 400 }
     );
   }

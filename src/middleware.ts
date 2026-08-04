@@ -62,15 +62,17 @@ export function middleware(req: NextRequest) {
 
   const host = (req.headers.get("host") || "").toLowerCase().split(":")[0];
   const isTip = pathname === "/t" || pathname.startsWith("/t/");
+  const isPortal = pathname === "/portal" || pathname.startsWith("/portal/");
+  const isWorkerFacing = isTip || isPortal; // both live on the app host
 
-  if (host === APP_HOST && !isTip) {
+  if (host === APP_HOST && !isWorkerFacing) {
     // Webview host: admin/other paths belong on the admin host.
     return NextResponse.redirect(
       new URL(`https://${ADMIN_HOST}${pathname}${search}`)
     );
   }
-  if (host === ADMIN_HOST && isTip) {
-    // Admin host: tip links belong on the webview host.
+  if (host === ADMIN_HOST && isWorkerFacing) {
+    // Admin host: tip and worker-portal links belong on the webview host.
     return NextResponse.redirect(
       new URL(`https://${APP_HOST}${pathname}${search}`)
     );

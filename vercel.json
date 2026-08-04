@@ -5,6 +5,9 @@
       "maxDuration": 30
     }
   },
+  "crons": [
+    { "path": "/api/cron/refresh-square-tokens", "schedule": "0 3 * * *" }
+  ],
   "headers": [
     {
       "source": "/api/mobile/(.*)",

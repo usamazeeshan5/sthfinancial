@@ -3,6 +3,7 @@ import { verifySquareWebhook, SquareWebhookEvent } from "@/lib/square";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/lib/models/Transaction";
 import Payout from "@/lib/models/Payout";
+import WebhookEvent from "@/lib/models/WebhookEvent";
 import { markTransactionsDeposited } from "@/lib/markTransactionsDeposited";
 
 export async function POST(req: NextRequest) {
@@ -25,6 +26,20 @@ export async function POST(req: NextRequest) {
   }
 
   await connectDB();
+
+  // Duplicate-event protection: Square may redeliver the same event. Record the
+  // event_id under a unique index; if it's already there, we've handled it.
+  if (event.event_id) {
+    try {
+      await WebhookEvent.create({ eventId: event.event_id, type: event.type });
+    } catch (err: unknown) {
+      // Duplicate key → already processed. Acknowledge and stop.
+      if ((err as { code?: number })?.code === 11000) {
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+      throw err;
+    }
+  }
 
   try {
     switch (event.type) {

@@ -85,8 +85,8 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
   const [amount, setAmount] = useState<number>(0);
   const [custom, setCustom] = useState("");
   const [rates, setRates] = useState<{
-    percentageFee: number;
-    flatFee: number;
+    platformPercentageFee: number;
+    platformFlatFee: number;
   } | null>(null);
 
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -97,26 +97,40 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
   const cardRef = useRef<any>(null);
   const attachedRef = useRef(false);
 
-  // Live fee rates so the estimate matches what the server will actually
-  // quote (the admin can change these at any time).
+  // Live platform-fee config so the estimate matches the server's gross-up
+  // quote (admin can change it at any time). The estimate mirrors the
+  // server-side gross-up in lib/feeMath.ts.
   useEffect(() => {
     fetch("/api/fees")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (d) setRates({ percentageFee: d.percentageFee, flatFee: d.flatFee });
+        if (d)
+          setRates({
+            platformPercentageFee: d.platformPercentageFee || 0,
+            platformFlatFee: d.platformFlatFee || 0,
+          });
       })
       .catch(() => {
         /* estimate is optional — the quote screen shows the real number */
       });
   }, []);
 
-  const estFee =
-    rates && amount > 0
-      ? Math.round((amount * (rates.percentageFee / 100) + rates.flatFee) * 100) /
-        100
-      : null;
-  const estTotal =
-    estFee !== null ? Math.round((amount + estFee) * 100) / 100 : null;
+  // Mirror of lib/feeMath.ts (kept in sync): worker nets exactly the tip.
+  const SQUARE_PERCENT = 0.029;
+  const SQUARE_FIXED_CENTS = 30;
+  const estimate = (() => {
+    if (!rates || amount <= 0) return { fee: null as number | null, total: null as number | null };
+    const tipCents = Math.round(amount * 100);
+    const appFeeCents =
+      Math.round(tipCents * (rates.platformPercentageFee / 100)) +
+      Math.round(rates.platformFlatFee * 100);
+    const totalCents = Math.ceil(
+      (tipCents + SQUARE_FIXED_CENTS + Math.max(0, appFeeCents)) / (1 - SQUARE_PERCENT)
+    );
+    return { fee: (totalCents - tipCents) / 100, total: totalCents / 100 };
+  })();
+  const estFee = estimate.fee;
+  const estTotal = estimate.total;
 
   const pickPreset = (v: number) => {
     setAmount(v);
@@ -255,7 +269,7 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
 
             <div className="mt-7 rounded-2xl bg-[#F9FAFB] border border-[#F0F1F3] p-4 text-left">
               <Row label="Tip" value={money(quote.amount)} />
-              <Row label="Processing fee" value={money(quote.fee)} />
+              <Row label="LoveTap service fee" value={money(quote.fee)} />
               <Divider />
               <Row label="Total charged" value={money(quote.totalCharged)} bold />
             </div>
@@ -281,7 +295,7 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
             <div className="rounded-2xl bg-[#F9FAFB] border border-[#F0F1F3] p-4">
               <Row label="Tip" value={money(quote.amount)} />
               <Row
-                label={`Fee (${quote.percentageFee}% + ${money(quote.flatFee)})`}
+                label="LoveTap service fee"
                 value={money(quote.fee)}
               />
               <Divider />
@@ -387,7 +401,7 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
           {amount > 0 && estTotal !== null && (
             <div className="mt-4 rounded-2xl bg-[#FFF7F5] border border-[#FBE3DB] p-4">
               <Row label="Tip" value={money(amount)} />
-              <Row label="Processing fee" value={money(estFee!)} />
+              <Row label="LoveTap service fee" value={money(estFee!)} />
               <Divider tone="warm" />
               <Row label="You pay" value={money(estTotal)} bold />
             </div>

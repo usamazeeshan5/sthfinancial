@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MoreHorizontal, Eye, Play, RotateCw } from "lucide-react";
+import { MoreHorizontal, Eye } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { StatusBadge } from "@/components/status-badge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
@@ -25,7 +25,6 @@ export default function PayoutsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actingId, setActingId] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [detail, setDetail] = useState<Payout | null>(null);
 
@@ -53,24 +52,6 @@ export default function PayoutsPage() {
     return () => document.removeEventListener("click", close);
   }, [openMenu]);
 
-  const act = async (id: string, action: "process" | "retry") => {
-    setActingId(id);
-    setError(null);
-    try {
-      const r = await fetch(`/api/payouts/${id}/${action}`, { method: "POST" });
-      if (!r.ok) {
-        const d = await r.json().catch(() => ({}));
-        setError(d.error || `Failed to ${action} payout.`);
-      } else {
-        fetchPayouts();
-      }
-    } catch {
-      setError(`Failed to ${action} payout.`);
-    } finally {
-      setActingId(null);
-    }
-  };
-
   const totalScheduled = payouts.filter((p) => p.status === "scheduled").reduce((s, p) => s + p.amount, 0);
   const totalCompleted = payouts.filter((p) => p.status === "completed").reduce((s, p) => s + p.amount, 0);
   const totalFailed = payouts.filter((p) => p.status === "failed").reduce((s, p) => s + p.amount, 0);
@@ -80,7 +61,7 @@ export default function PayoutsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Payouts</h1>
         <p className="text-sm text-muted mt-1">
-          Payout requests from workers. Tap Process to approve a scheduled request — this marks the worker&apos;s tips as deposited. (Square still auto-deposits their Square balance to their bank on its own schedule.)
+          View and reconcile Square payout status. Tips settle directly into each worker&apos;s own Square balance, and Square transfers to their bank on its own schedule — LoveTap does not process payouts. Use this to spot failed or delayed transfers and direct the worker to Square.
         </p>
       </div>
 
@@ -129,7 +110,7 @@ export default function PayoutsPage() {
         </div>
       ) : payouts.length === 0 ? (
         <div className="bg-card rounded-2xl border border-border p-8 text-center text-sm text-muted">
-          No payout requests yet. They&apos;ll appear here when a worker requests a payout from the app.
+          No payouts to show yet. Square payout activity for connected workers will appear here.
         </div>
       ) : (
         <>
@@ -143,9 +124,9 @@ export default function PayoutsPage() {
                     <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Amount</th>
                     <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Status</th>
                     <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Destination</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Requested</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Initiated</th>
                     <th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Completed</th>
-                    <th className="text-right px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
+                    <th className="text-right px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -158,32 +139,12 @@ export default function PayoutsPage() {
                       <td className="px-5 py-3 text-muted">{formatDate(p.scheduledAt)}</td>
                       <td className="px-5 py-3 text-muted">{p.completedAt ? formatDateTime(p.completedAt) : "—"}</td>
                       <td className="px-5 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          {p.status === "scheduled" && (
-                            <button
-                              onClick={() => act(p._id, "process")}
-                              disabled={actingId === p._id}
-                              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50"
-                            >
-                              {actingId === p._id ? "Processing..." : "Process"}
-                            </button>
-                          )}
-                          {p.status === "failed" && (
-                            <button
-                              onClick={() => act(p._id, "retry")}
-                              disabled={actingId === p._id}
-                              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-card border border-border disabled:opacity-50"
-                            >
-                              {actingId === p._id ? "Retrying..." : "Retry"}
-                            </button>
-                          )}
+                        <div className="flex items-center justify-end">
                           <div className="relative">
                             <button onClick={(e) => { e.stopPropagation(); setOpenMenu(openMenu === p._id ? null : p._id); }} className="p-1 rounded-lg hover:bg-sidebar-hover"><MoreHorizontal className="w-4 h-4 text-muted" /></button>
                             {openMenu === p._id && (
                               <div onClick={(e) => e.stopPropagation()} className="absolute right-0 top-8 z-20 w-44 bg-card border border-border rounded-xl shadow-lg py-1">
                                 <button onClick={() => { setOpenMenu(null); setDetail(p); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-background transition-colors"><Eye className="w-4 h-4 text-muted" />View details</button>
-                                {p.status === "scheduled" && <button onClick={() => { setOpenMenu(null); act(p._id, "process"); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-background transition-colors"><Play className="w-4 h-4 text-muted" />Process</button>}
-                                {p.status === "failed" && <button onClick={() => { setOpenMenu(null); act(p._id, "retry"); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left hover:bg-background transition-colors"><RotateCw className="w-4 h-4 text-muted" />Retry</button>}
                               </div>
                             )}
                           </div>
@@ -207,42 +168,22 @@ export default function PayoutsPage() {
                 <p className="text-lg font-semibold">{formatCurrency(p.amount)}</p>
                 <div className="text-xs text-muted">
                   <p>Destination: {p.destination}</p>
-                  <p>Requested: {formatDate(p.scheduledAt)}</p>
+                  <p>Initiated: {formatDate(p.scheduledAt)}</p>
                   {p.completedAt && <p>Completed: {formatDateTime(p.completedAt)}</p>}
                 </div>
-                <div className="flex gap-2 mt-1">
-                  <button
-                    onClick={() => setDetail(p)}
-                    className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-card border border-border text-muted hover:text-foreground transition-colors"
-                  >
-                    View details
-                  </button>
-                  {p.status === "scheduled" && (
-                    <button
-                      onClick={() => act(p._id, "process")}
-                      disabled={actingId === p._id}
-                      className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-primary text-primary-foreground disabled:opacity-50"
-                    >
-                      {actingId === p._id ? "Processing..." : "Process"}
-                    </button>
-                  )}
-                  {p.status === "failed" && (
-                    <button
-                      onClick={() => act(p._id, "retry")}
-                      disabled={actingId === p._id}
-                      className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-card border border-border disabled:opacity-50"
-                    >
-                      {actingId === p._id ? "Retrying..." : "Retry"}
-                    </button>
-                  )}
-                </div>
+                <button
+                  onClick={() => setDetail(p)}
+                  className="w-full mt-1 px-3 py-2 rounded-lg text-xs font-medium bg-card border border-border text-muted hover:text-foreground transition-colors"
+                >
+                  View details
+                </button>
               </div>
             ))}
           </div>
         </>
       )}
 
-      {/* Details modal */}
+      {/* Details modal (view only) */}
       <Modal open={detail !== null} onClose={() => setDetail(null)} title="Payout Details">
         {detail && (
           <div className="space-y-4">
@@ -254,18 +195,15 @@ export default function PayoutsPage() {
               <DetailRow label="Worker" value={detail.customerName} />
               <DetailRow label="Amount" value={formatCurrency(detail.amount)} bold />
               <DetailRow label="Destination" value={detail.destination} />
-              <DetailRow label="Requested" value={formatDate(detail.scheduledAt)} />
+              <DetailRow label="Initiated" value={formatDate(detail.scheduledAt)} />
               <DetailRow label="Completed" value={detail.completedAt ? formatDateTime(detail.completedAt) : "—"} />
               {detail.squarePayoutId && <DetailRow label="Square payout ID" value={detail.squarePayoutId} mono />}
-              <DetailRow label="Payout ID" value={detail._id} mono />
+              <DetailRow label="Record ID" value={detail._id} mono />
             </div>
-            <div className="flex justify-end gap-2 pt-1">
-              {detail.status === "scheduled" && (
-                <button onClick={() => { act(detail._id, "process"); setDetail(null); }} className="px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">Process</button>
-              )}
-              {detail.status === "failed" && (
-                <button onClick={() => { act(detail._id, "retry"); setDetail(null); }} className="px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-medium hover:bg-background transition-colors">Retry</button>
-              )}
+            <p className="text-xs text-muted">
+              This payout is controlled by Square. If it failed or is delayed, ask the worker to review their Square account and bank details.
+            </p>
+            <div className="flex justify-end pt-1">
               <button onClick={() => setDetail(null)} className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium text-muted hover:text-foreground transition-colors">Close</button>
             </div>
           </div>

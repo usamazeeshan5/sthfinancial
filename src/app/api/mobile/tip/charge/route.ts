@@ -4,6 +4,7 @@ import { SquareClient, SquareEnvironment } from "square";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/lib/models/Transaction";
 import Customer from "@/lib/models/Customer";
+import { ensureFreshToken } from "@/lib/squareOAuth";
 
 // Direct-to-seller charging via Square OAuth.
 // Money settles into the worker's own Square balance using their OAuth
@@ -47,10 +48,17 @@ export async function POST(req: NextRequest) {
     );
   }
   const recipient = await Customer.findById(txn.customerId).select(
-    "+squareAccessToken squareLocationId squareMerchantId bankAccountStatus name"
+    "+squareAccessToken +squareRefreshToken squareTokenExpiresAt squareLocationId squareMerchantId bankAccountStatus name"
   );
   if (!recipient) {
     return NextResponse.json({ error: "Recipient not found" }, { status: 404 });
+  }
+  // Lazy refresh: keep the seller's token fresh so a charge never fails on an
+  // access token that's about to expire.
+  try {
+    await ensureFreshToken(recipient, 7);
+  } catch (e) {
+    console.warn("[mobile/tip/charge] token refresh check failed:", e);
   }
   if (
     !recipient.squareAccessToken ||

@@ -1,20 +1,20 @@
 // Generates human-readable, unambiguous NFC chip codes.
 //
-// Format: LT-XXXX-XXXX (e.g. LT-7F3K-9QH2)
-// The alphabet excludes easily-confused characters (0/O, 1/I/L) so codes are
-// safe to print on packaging and read back by hand.
+// Format: LT-XXXXXX (e.g. LT-7K9M2Q) — 6 random characters after the LT- brand
+// prefix. The alphabet excludes easily-confused characters (0/O, 1/I/L) so codes
+// are safe to print on packaging and read back by hand. Codes are looked up
+// case-insensitively and the route accepts variable-length codes, so future
+// batches can use longer codes without affecting existing pendants.
 
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+const CODE_LENGTH = 6;
 
 export function randomChipCode(prefix = "LT"): string {
-  const block = (len: number) => {
-    let out = "";
-    for (let i = 0; i < len; i++) {
-      out += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
-    }
-    return out;
-  };
-  return `${prefix}-${block(4)}-${block(4)}`;
+  let out = "";
+  for (let i = 0; i < CODE_LENGTH; i++) {
+    out += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+  }
+  return `${prefix}-${out}`;
 }
 
 // Generates `count` unique codes in one batch. Uniqueness is checked locally;

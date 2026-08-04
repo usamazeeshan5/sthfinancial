@@ -5,6 +5,7 @@ import NfcChip from "@/lib/models/NfcChip";
 import Customer from "@/lib/models/Customer";
 import FeeConfig from "@/lib/models/FeeConfig";
 import Transaction from "@/lib/models/Transaction";
+import { computeFee, computeAppFeeCents, toCents, toDollars } from "@/lib/feeMath";
 
 export async function POST(req: NextRequest) {
   await connectDB();
@@ -57,21 +58,19 @@ export async function POST(req: NextRequest) {
     feeConfig = await FeeConfig.create({ flatFee: 0.3, percentageFee: 3.9 });
   }
 
-  const fee =
-    Math.round(
-      (amount * (feeConfig.percentageFee / 100) + feeConfig.flatFee) * 100
-    ) / 100;
-  const totalCharged = Math.round((amount + fee) * 100) / 100;
+  // Gross-up so the worker nets EXACTLY the displayed tip after Square's
+  // processing fee and LoveTap's application fee are both deducted.
+  const tipCents = toCents(amount);
+  const platformFeeCents = computeAppFeeCents(
+    tipCents,
+    feeConfig.platformPercentageFee || 0,
+    feeConfig.platformFlatFee || 0
+  );
+  const breakdown = computeFee(tipCents, platformFeeCents);
 
-  // Platform fee (the operator's own cut), computed on the tip amount and
-  // collected via Square's app_fee_money at charge time. Comes out of the
-  // processing fee margin — it is NOT added on top of what the tipper pays.
-  const platformFee =
-    Math.round(
-      (amount * ((feeConfig.platformPercentageFee || 0) / 100) +
-        (feeConfig.platformFlatFee || 0)) *
-        100
-    ) / 100;
+  const totalCharged = toDollars(breakdown.totalCents); // tipper pays
+  const fee = toDollars(breakdown.serviceFeeCents); // LoveTap service fee shown
+  const platformFee = toDollars(breakdown.appFeeCents); // LoveTap's cut (app fee)
 
   const quoteId = randomUUID();
 
