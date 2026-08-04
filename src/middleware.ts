@@ -65,11 +65,21 @@ export function middleware(req: NextRequest) {
   const isPortal = pathname === "/portal" || pathname.startsWith("/portal/");
   const isWorkerFacing = isTip || isPortal; // both live on the app host
 
-  if (host === APP_HOST && !isWorkerFacing) {
-    // Webview host: admin/other paths belong on the admin host.
-    return NextResponse.redirect(
-      new URL(`https://${ADMIN_HOST}${pathname}${search}`)
-    );
+  if (host === APP_HOST) {
+    // The app host is the worker/customer face. Its root and login go to the
+    // worker portal, not the admin panel.
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL(`https://${APP_HOST}/portal`));
+    }
+    if (pathname === "/login") {
+      return NextResponse.redirect(new URL(`https://${APP_HOST}/portal/login`));
+    }
+    if (!isWorkerFacing) {
+      // Genuine admin paths belong on the admin host.
+      return NextResponse.redirect(
+        new URL(`https://${ADMIN_HOST}${pathname}${search}`)
+      );
+    }
   }
   if (host === ADMIN_HOST && isWorkerFacing) {
     // Admin host: tip and worker-portal links belong on the webview host.
