@@ -42,7 +42,12 @@ export function Sidebar({
   const userInitial = userName.charAt(0).toUpperCase();
 
   const handleLogout = () => {
-    signOut({ callbackUrl: "/login" });
+    // Redirect back to /login on the SAME host (adminpanel.lovetap.me), not the
+    // apex — a relative callbackUrl resolves against AUTH_URL, which sends the
+    // admin to lovetap.me/login after sign-out.
+    const target =
+      typeof window !== "undefined" ? `${window.location.origin}/login` : "/login";
+    signOut({ callbackUrl: target, redirect: true });
   };
 
   return (
