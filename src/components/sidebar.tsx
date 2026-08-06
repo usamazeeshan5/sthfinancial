@@ -41,13 +41,12 @@ export function Sidebar({
   const userEmail = session?.user?.email || "admin@lovetap.me";
   const userInitial = userName.charAt(0).toUpperCase();
 
-  const handleLogout = () => {
-    // Redirect back to /login on the SAME host (adminpanel.lovetap.me), not the
-    // apex — a relative callbackUrl resolves against AUTH_URL, which sends the
-    // admin to lovetap.me/login after sign-out.
-    const target =
-      typeof window !== "undefined" ? `${window.location.origin}/login` : "/login";
-    signOut({ callbackUrl: target, redirect: true });
+  const handleLogout = async () => {
+    // Clear the session without NextAuth's own redirect (which resolves against
+    // AUTH_URL and sends the admin to lovetap.me), then redirect to /login on
+    // the SAME host (e.g. adminpanel.lovetap.me).
+    await signOut({ redirect: false });
+    window.location.href = `${window.location.origin}/login`;
   };
 
   return (
