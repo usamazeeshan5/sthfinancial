@@ -43,6 +43,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
   },
   callbacks: {
+    // Persist the admin's DB id in the JWT and expose it on the session, so
+    // admin APIs identify the account by id (stable even if the email changes).
+    jwt({ token, user }) {
+      if (user?.id) token.uid = user.id;
+      return token;
+    },
+    session({ session, token }) {
+      if (token.uid && session.user) {
+        (session.user as { id?: string }).id = token.uid as string;
+      }
+      return session;
+    },
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const isOnLogin = nextUrl.pathname === "/login";

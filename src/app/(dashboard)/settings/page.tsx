@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { User, Bell, Shield, Mail } from "lucide-react";
 
 const notificationItems = [
@@ -11,8 +11,20 @@ const notificationItems = [
 ];
 
 export default function SettingsPage() {
-  const [name, setName] = useState("Admin");
-  const [email, setEmail] = useState("admin@lovetap.me");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileMsg, setProfileMsg] = useState("");
+  const [profileErr, setProfileErr] = useState("");
+
+  const [showPw, setShowPw] = useState(false);
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [savingPw, setSavingPw] = useState(false);
+  const [pwMsg, setPwMsg] = useState("");
+  const [pwErr, setPwErr] = useState("");
 
   const [notifications, setNotifications] = useState({
     failedTransactions: true,
@@ -20,6 +32,54 @@ export default function SettingsPage() {
     newCustomers: false,
     dailySummary: true,
   });
+
+  useEffect(() => {
+    fetch("/api/admin/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d) {
+          setName(d.name || "");
+          setEmail(d.email || "");
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const saveProfile = async () => {
+    setProfileErr("");
+    setProfileMsg("");
+    setSavingProfile(true);
+    const res = await fetch("/api/admin/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email }),
+    });
+    const d = await res.json();
+    setSavingProfile(false);
+    if (!res.ok) return setProfileErr(d.error || "Couldn't save.");
+    setName(d.name);
+    setEmail(d.email);
+    setProfileMsg("Profile saved.");
+  };
+
+  const changePassword = async () => {
+    setPwErr("");
+    setPwMsg("");
+    setSavingPw(true);
+    const res = await fetch("/api/admin/change-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: curPw, newPassword: newPw }),
+    });
+    const d = await res.json();
+    setSavingPw(false);
+    if (!res.ok) return setPwErr(d.error || "Couldn't change password.");
+    setPwMsg("Password changed.");
+    setCurPw("");
+    setNewPw("");
+    setShowPw(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -29,7 +89,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-        {/* Profile — spans 2 of 3 on wide screens */}
+        {/* Profile */}
         <div className="xl:col-span-2 bg-card rounded-2xl border border-border overflow-hidden">
           <div className="flex items-center gap-2 px-6 py-4 border-b border-border">
             <User className="w-4 h-4 text-accent" />
@@ -37,10 +97,9 @@ export default function SettingsPage() {
           </div>
 
           <div className="p-6 space-y-6">
-            {/* Avatar row */}
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center text-2xl font-semibold text-accent shrink-0">
-                {name.charAt(0).toUpperCase() || "A"}
+                {(name.charAt(0) || "A").toUpperCase()}
               </div>
               <div className="min-w-0">
                 <p className="text-base font-semibold truncate">{name || "Admin"}</p>
@@ -48,13 +107,20 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Fields — two columns on desktop */}
+            {profileMsg && (
+              <div className="px-4 py-2.5 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">{profileMsg}</div>
+            )}
+            {profileErr && (
+              <div className="px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{profileErr}</div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-muted mb-1.5">Name</label>
                 <input
                   type="text"
                   value={name}
+                  disabled={loading}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
                 />
@@ -64,31 +130,83 @@ export default function SettingsPage() {
                 <input
                   type="email"
                   value={email}
+                  disabled={loading}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
                 />
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-border">
-              <div className="flex items-center gap-2 text-sm text-muted">
-                <Shield className="w-4 h-4" />
-                <span>Password &amp; security</span>
+            {/* Password & security */}
+            <div className="pt-2 border-t border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm text-muted">
+                  <Shield className="w-4 h-4" />
+                  <span>Password &amp; security</span>
+                </div>
+                <button
+                  onClick={() => setShowPw((v) => !v)}
+                  className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium text-muted hover:text-foreground transition-colors"
+                >
+                  {showPw ? "Cancel" : "Change Password"}
+                </button>
               </div>
-              <button className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm font-medium text-muted hover:text-foreground transition-colors">
-                Change Password
-              </button>
+
+              {showPw && (
+                <div className="mt-4 space-y-3">
+                  {pwMsg && (
+                    <div className="px-4 py-2.5 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">{pwMsg}</div>
+                  )}
+                  {pwErr && (
+                    <div className="px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{pwErr}</div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-muted mb-1.5">Current password</label>
+                      <input
+                        type="password"
+                        value={curPw}
+                        onChange={(e) => setCurPw(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-muted mb-1.5">New password</label>
+                      <input
+                        type="password"
+                        value={newPw}
+                        minLength={6}
+                        onChange={(e) => setNewPw(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={changePassword}
+                      disabled={savingPw || !curPw || !newPw}
+                      className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      {savingPw ? "Updating…" : "Update Password"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end">
-              <button className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
-                Save Profile
+              <button
+                onClick={saveProfile}
+                disabled={savingProfile || loading}
+                className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {savingProfile ? "Saving…" : "Save Profile"}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Notifications — 1 of 3 */}
+        {/* Notifications */}
         <div className="bg-card rounded-2xl border border-border overflow-hidden">
           <div className="flex items-center gap-2 px-6 py-4 border-b border-border">
             <Bell className="w-4 h-4 text-accent" />
