@@ -8,10 +8,35 @@ import Customer from "@/lib/models/Customer";
 // the browser back into the mobile app via the `lovetap://` deep link.
 
 const DEEP_LINK = "lovetap://payouts";
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://app.lovetap.me").replace(/\/+$/, "");
 
 function deepLink(params: Record<string, string>) {
   const qs = new URLSearchParams(params).toString();
   return `${DEEP_LINK}?${qs}`;
+}
+
+// Parses the OAuth state: "<customerId>" (mobile, legacy) or
+// "<customerId>.web" / "<customerId>.app".
+function parseState(state: string): { customerId: string; platform: "web" | "app" } {
+  const [customerId, plat] = state.split(".");
+  return { customerId, platform: plat === "web" ? "web" : "app" };
+}
+
+// Finishes the OAuth flow: web flows get a real redirect to the worker portal;
+// mobile flows get the deep-link bounce page.
+function finish(
+  platform: "web" | "app",
+  params: Record<string, string>,
+  message: string
+): Response {
+  if (platform === "web") {
+    const dest = `${APP_URL}/portal?${new URLSearchParams({
+      square: params.connected === "true" ? "connected" : "error",
+      ...(params.error ? { reason: params.error } : {}),
+    }).toString()}`;
+    return Response.redirect(dest, 302);
+  }
+  return htmlRedirect(deepLink(params), message);
 }
 
 function htmlRedirect(link: string, message: string) {
@@ -36,24 +61,31 @@ export async function GET(req: NextRequest) {
   const state = url.searchParams.get("state");
   const oauthError = url.searchParams.get("error");
 
+  const platform = state ? parseState(state).platform : "app";
+
   if (oauthError) {
-    return htmlRedirect(
-      deepLink({ connected: "false", error: oauthError }),
+    return finish(
+      platform,
+      { connected: "false", error: oauthError },
       "Authorization was cancelled or denied."
     );
   }
   if (!code || !state) {
-    return htmlRedirect(
-      deepLink({ connected: "false", error: "missing_params" }),
+    return finish(
+      platform,
+      { connected: "false", error: "missing_params" },
       "Missing authorization code."
     );
   }
 
+  const { customerId } = parseState(state);
+
   const applicationId = process.env.SQUARE_APPLICATION_ID;
   const applicationSecret = process.env.SQUARE_APPLICATION_SECRET;
   if (!applicationId || !applicationSecret) {
-    return htmlRedirect(
-      deepLink({ connected: "false", error: "server_misconfigured" }),
+    return finish(
+      platform,
+      { connected: "false", error: "server_misconfigured" },
       "Square OAuth is not fully configured on the server."
     );
   }
@@ -70,10 +102,11 @@ export async function GET(req: NextRequest) {
   try {
     await connectDB();
 
-    const customer = await Customer.findById(state);
+    const customer = await Customer.findById(customerId);
     if (!customer) {
-      return htmlRedirect(
-        deepLink({ connected: "false", error: "invalid_state" }),
+      return finish(
+        platform,
+        { connected: "false", error: "invalid_state" },
         "Could not find your account. Please try again."
       );
     }
@@ -97,8 +130,9 @@ export async function GET(req: NextRequest) {
     if (!tokenResponse.ok) {
       const errBody = await tokenResponse.text();
       console.error("[square-connect/callback] token exchange failed:", tokenResponse.status, errBody);
-      return htmlRedirect(
-        deepLink({ connected: "false", error: "token_exchange_failed" }),
+      return finish(
+        platform,
+        { connected: "false", error: "token_exchange_failed" },
         "Could not complete the Square connection. Please try again."
       );
     }
@@ -150,14 +184,16 @@ export async function GET(req: NextRequest) {
     customer.bankAccountStatus = "connected";
     await customer.save();
 
-    return htmlRedirect(
-      deepLink({ connected: "true" }),
+    return finish(
+      platform,
+      { connected: "true" },
       "Bank connected. Returning to the app..."
     );
   } catch (e: unknown) {
     console.error("[square-connect/callback] unexpected error:", e);
-    return htmlRedirect(
-      deepLink({ connected: "false", error: "callback_error" }),
+    return finish(
+      platform,
+      { connected: "false", error: "callback_error" },
       "Something went wrong completing the connection."
     );
   }

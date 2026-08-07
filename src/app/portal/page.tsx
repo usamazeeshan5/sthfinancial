@@ -56,10 +56,16 @@ function HomeInner() {
     load();
     if (params.get("claimed")) setNotice("LoveTap added to your account.");
     if (params.get("claim_error")) setError(params.get("claim_error") || "");
+    if (params.get("square") === "connected") setNotice("Square connected — you're ready to receive tips.");
+    if (params.get("square") === "error")
+      setError("Square couldn't be connected" + (params.get("reason") ? ` (${params.get("reason")})` : "") + ". Please try again.");
   }, [load, router, params]);
 
   const connectSquare = async () => {
-    const res = await api("/api/mobile/portal/square-connect/onboard", { method: "POST" });
+    const res = await api("/api/mobile/portal/square-connect/onboard", {
+      method: "POST",
+      body: JSON.stringify({ platform: "web" }),
+    });
     const data = await res.json();
     if (data.url) window.location.href = data.url;
     else setError(data.error || "Couldn't start Square connection.");

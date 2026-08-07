@@ -27,6 +27,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // The caller tells us where to return after OAuth: "web" (the worker portal)
+  // or "app" (the mobile app via deep link). Defaults to "app" for older
+  // mobile clients that don't send it.
+  const platform = (await req.json().catch(() => ({})))?.platform === "web" ? "web" : "app";
+
   const customer = await Customer.findById(payload.id);
   if (!customer) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
@@ -68,7 +73,10 @@ export async function POST(req: NextRequest) {
     "BANK_ACCOUNTS_READ",
   ].join(" ");
 
-  const state = customer._id.toString();
+  // Encode the return platform in the state so the callback knows whether to
+  // deep-link to the app or redirect to the web portal. ObjectIds are hex, so
+  // the "." separator is unambiguous.
+  const state = `${customer._id.toString()}.${platform}`;
   const params = new URLSearchParams({
     client_id: applicationId,
     scope,
