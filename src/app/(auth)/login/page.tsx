@@ -14,25 +14,40 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setLoading(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-    setLoading(false);
+      // Check error FIRST
+      if (result?.error) {
+        setError("Invalid email or password");
+        return;
+      }
 
-    if (result?.ok) {
-      router.push("/");
-    } else {
+      // Only redirect when there is no error
+      if (result?.ok) {
+        router.push("/");
+        return;
+      }
+
       setError("Invalid email or password");
+    } catch (error) {
+      console.error("LOGIN ERROR:", error);
+      setError("Invalid email or password");
+    } finally {
+      setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">

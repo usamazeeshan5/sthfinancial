@@ -1,8 +1,17 @@
+import dns from "dns";
+
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { connectDB } from "./db";
 import AdminUser from "./models/AdminUser";
+
+// dns.setServers(["8.8.8.8", "8.8.4.4"]);
+
+if (process.env.NODE_ENV === "development") {
+  dns.setServers(["8.8.8.8", "8.8.4.4"]);
+}
+
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // Admin runs on a custom subdomain (adminpanel.lovetap.me) as well as the
@@ -16,24 +25,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+  try {
 
-        await connectDB();
-        const user = await AdminUser.findOne({ email: credentials.email });
-        if (!user) return null;
+    if (!credentials?.email || !credentials?.password) {
+      return null;
+    }
 
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
-        if (!isValid) return null;
+    const email = String(credentials.email).trim().toLowerCase();
+    const password = String(credentials.password);
 
-        return {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-        };
-      },
+
+    await connectDB();
+
+    const user = await AdminUser.findOne({ email });
+
+    if (!user) {
+      return null;
+    }
+
+
+    const isValid = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+
+    if (!isValid) {
+      return null;
+    }
+
+
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+    };
+  } catch (error) {
+    return null;
+  }
+},
     }),
   ],
   pages: {
