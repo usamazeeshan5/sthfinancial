@@ -397,29 +397,29 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
               .
             </p>
 
-            {/* Digital wallets (Google Pay / Apple Pay) — shown only when the
-                device/browser supports them. */}
-            {(googlePayReady || applePayReady) && (
-              <div className="mt-6 space-y-2.5">
-                {applePayReady && (
-                  <button
-                    onClick={() => payWithWallet("apple")}
-                    disabled={busy}
-                    aria-label="Pay with Apple Pay"
-                    className="w-full h-[48px] rounded-xl bg-black text-white text-[15px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50"
-                  >
-                    <span style={{ fontSize: 18 }}></span> Pay
-                  </button>
-                )}
-                {/* Square renders the Google Pay button inside this container;
-                    the click bridges to tokenize + charge. */}
-                {googlePayReady && (
-                  <div
-                    id="gpay-container"
-                    onClick={() => !busy && payWithWallet("google")}
-                    className="w-full min-h-[48px] [&>*]:w-full"
-                  />
-                )}
+            {/* Digital wallets (Google Pay / Apple Pay). The Google Pay
+                container is ALWAYS rendered (empty = zero height) so Square can
+                attach its button into it; the divider/Apple button appear only
+                once a wallet is actually available. */}
+            <div className="mt-6 space-y-2.5">
+              {applePayReady && (
+                <button
+                  onClick={() => payWithWallet("apple")}
+                  disabled={busy}
+                  aria-label="Pay with Apple Pay"
+                  className="w-full h-[48px] rounded-xl bg-black text-white text-[15px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  <span style={{ fontSize: 18 }}></span> Pay
+                </button>
+              )}
+              {/* Square renders the Google Pay button inside this container;
+                  the click bridges to tokenize + charge. */}
+              <div
+                id="gpay-container"
+                onClick={() => !busy && payWithWallet("google")}
+                className="[&>*]:w-full"
+              />
+              {(googlePayReady || applePayReady) && (
                 <div className="relative flex items-center gap-3 py-1">
                   <div className="h-px flex-1 bg-[#EDEFF2]" />
                   <span className="text-[11px] font-medium uppercase tracking-wider text-[#C4C8CE]">
@@ -427,8 +427,8 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
                   </span>
                   <div className="h-px flex-1 bg-[#EDEFF2]" />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="mt-6">
               <div id="card-container" className="min-h-[100px]" />
