@@ -218,18 +218,21 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
 
         // Google Pay (Chrome / Android)
         try {
+          console.log("[LoveTap] init Google Pay · location:", quote.square.locationId, "· env:", quote.square.environment);
           const gp = await payments.googlePay(buildPaymentRequest());
           await gp.attach("#gpay-container", {
             buttonColor: "black",
             buttonType: "short",
             buttonSizeMode: "fill",
           });
+          const el = document.getElementById("gpay-container");
+          console.log("[LoveTap] Google Pay attached · button rendered:", !!el && el.childElementCount > 0);
           if (!cancelled) {
             googlePayRef.current = gp;
             setGooglePayReady(true);
           }
-        } catch {
-          /* Google Pay unavailable on this device — skip. */
+        } catch (e) {
+          console.warn("[LoveTap] Google Pay unavailable:", e);
         }
 
         // Apple Pay (Safari / iOS, requires the domain registered with Square)
@@ -239,8 +242,8 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
             applePayRef.current = ap;
             setApplePayReady(true);
           }
-        } catch {
-          /* Apple Pay unavailable here — skip. */
+        } catch (e) {
+          console.warn("[LoveTap] Apple Pay unavailable:", e);
         }
       } catch (e) {
         if (!cancelled) {
