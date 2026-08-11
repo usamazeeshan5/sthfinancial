@@ -93,8 +93,12 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cardReady, setCardReady] = useState(false);
+  const [googlePayReady, setGooglePayReady] = useState(false);
+  const [applePayReady, setApplePayReady] = useState(false);
 
   const cardRef = useRef<any>(null);
+  const googlePayRef = useRef<any>(null);
+  const applePayRef = useRef<any>(null);
   const attachedRef = useRef(false);
 
   // Live platform-fee config so the estimate matches the server's gross-up
@@ -171,7 +175,10 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
     }
   };
 
-  // Mount Square's hosted card fields once we're on the card step.
+  // Mount Square's card fields + digital wallets (Google Pay / Apple Pay) once
+  // we're on the card step. Wallets are best-effort: if a device/browser doesn't
+  // support one (or Apple Pay's domain isn't registered), it's silently skipped
+  // and the card form still works.
   useEffect(() => {
     if (step !== "card" || !quote || attachedRef.current) return;
     attachedRef.current = true;
@@ -185,6 +192,8 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
           quote.square.applicationId,
           quote.square.locationId
         );
+
+        // Card
         const card = await payments.card({
           style: {
             input: { fontSize: "16px", color: "#111827" },
@@ -198,9 +207,44 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
         await card.attach("#card-container");
         cardRef.current = card;
         setCardReady(true);
+
+        // A payment request describing the amount, shared by both wallets.
+        const buildPaymentRequest = () =>
+          payments.paymentRequest({
+            countryCode: "US",
+            currencyCode: "USD",
+            total: { amount: quote.totalCharged.toFixed(2), label: "LoveTap tip" },
+          });
+
+        // Google Pay (Chrome / Android)
+        try {
+          const gp = await payments.googlePay(buildPaymentRequest());
+          await gp.attach("#gpay-container", {
+            buttonColor: "black",
+            buttonType: "short",
+            buttonSizeMode: "fill",
+          });
+          if (!cancelled) {
+            googlePayRef.current = gp;
+            setGooglePayReady(true);
+          }
+        } catch {
+          /* Google Pay unavailable on this device — skip. */
+        }
+
+        // Apple Pay (Safari / iOS, requires the domain registered with Square)
+        try {
+          const ap = await payments.applePay(buildPaymentRequest());
+          if (!cancelled) {
+            applePayRef.current = ap;
+            setApplePayReady(true);
+          }
+        } catch {
+          /* Apple Pay unavailable here — skip. */
+        }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Couldn't load the card form.");
+          setError(e instanceof Error ? e.message : "Couldn't load the payment form.");
         }
       }
     })();
@@ -209,6 +253,24 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
       cancelled = true;
     };
   }, [step, quote]);
+
+  // Sends a tokenized payment (from card or a wallet) to the charge endpoint.
+  const chargeWithToken = useCallback(
+    async (sourceId: string) => {
+      if (!quote) return;
+      const res = await fetch("/api/mobile/tip/charge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quoteId: quote.quoteId, sourceId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data?.error || "Payment failed. Please try again.");
+      }
+      setStep("success");
+    },
+    [quote]
+  );
 
   const pay = useCallback(async () => {
     if (!cardRef.current || !quote || busy) return;
@@ -220,23 +282,37 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
         const detail = result.errors?.[0]?.message;
         throw new Error(detail || "Please check your card details.");
       }
-
-      const res = await fetch("/api/mobile/tip/charge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quoteId: quote.quoteId, sourceId: result.token }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data?.error || "Payment failed. Please try again.");
-      }
-      setStep("success");
+      await chargeWithToken(result.token);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Payment failed.");
     } finally {
       setBusy(false);
     }
-  }, [quote, busy]);
+  }, [quote, busy, chargeWithToken]);
+
+  // Pay with a digital wallet (Google Pay / Apple Pay).
+  const payWithWallet = useCallback(
+    async (wallet: "google" | "apple") => {
+      const ref = wallet === "google" ? googlePayRef.current : applePayRef.current;
+      if (!ref || !quote || busy) return;
+      setBusy(true);
+      setError(null);
+      try {
+        const result = await ref.tokenize();
+        if (result.status !== "OK") {
+          // A cancelled wallet sheet isn't an error worth showing.
+          if (result.status === "Cancel") return;
+          throw new Error(result.errors?.[0]?.message || "Wallet payment failed.");
+        }
+        await chargeWithToken(result.token);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Wallet payment failed.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [quote, busy, chargeWithToken]
+  );
 
   /* ---------------- success ---------------- */
   if (step === "success" && quote) {
@@ -318,12 +394,45 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
               .
             </p>
 
+            {/* Digital wallets (Google Pay / Apple Pay) — shown only when the
+                device/browser supports them. */}
+            {(googlePayReady || applePayReady) && (
+              <div className="mt-6 space-y-2.5">
+                {applePayReady && (
+                  <button
+                    onClick={() => payWithWallet("apple")}
+                    disabled={busy}
+                    aria-label="Pay with Apple Pay"
+                    className="w-full h-[48px] rounded-xl bg-black text-white text-[15px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    <span style={{ fontSize: 18 }}></span> Pay
+                  </button>
+                )}
+                {/* Square renders the Google Pay button inside this container;
+                    the click bridges to tokenize + charge. */}
+                {googlePayReady && (
+                  <div
+                    id="gpay-container"
+                    onClick={() => !busy && payWithWallet("google")}
+                    className="w-full min-h-[48px] [&>*]:w-full"
+                  />
+                )}
+                <div className="relative flex items-center gap-3 py-1">
+                  <div className="h-px flex-1 bg-[#EDEFF2]" />
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-[#C4C8CE]">
+                    or pay by card
+                  </span>
+                  <div className="h-px flex-1 bg-[#EDEFF2]" />
+                </div>
+              </div>
+            )}
+
             <div className="mt-6">
               <div id="card-container" className="min-h-[100px]" />
               {!cardReady && !error && (
                 <div className="flex items-center justify-center gap-2 py-6 text-sm text-[#9CA3AF]">
                   <Spinner />
-                  Loading secure card form…
+                  Loading secure payment form…
                 </div>
               )}
             </div>
