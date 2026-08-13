@@ -95,6 +95,9 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
   const [cardReady, setCardReady] = useState(false);
   const [googlePayReady, setGooglePayReady] = useState(false);
   const [applePayReady, setApplePayReady] = useState(false);
+  // Diagnostic string for why Apple Pay was/wasn't offered — only surfaced
+  // when the page is loaded with ?debug=1 (invisible to normal customers).
+  const [walletDebug, setWalletDebug] = useState<string>("");
 
   const cardRef = useRef<any>(null);
   const googlePayRef = useRef<any>(null);
@@ -234,14 +237,37 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
 
         // Apple Pay (Safari / iOS, requires the domain registered with Square)
         try {
+          // Probe the native Apple Pay capability first so we can report the
+          // precise reason it's unavailable (browser vs. no card vs. seller).
+          const APS = (window as any).ApplePaySession;
+          const canMake =
+            APS && typeof APS.canMakePayments === "function"
+              ? APS.canMakePayments()
+              : null;
           const ap = await payments.applePay(buildPaymentRequest());
           if (!cancelled) {
             applePayRef.current = ap;
             setApplePayReady(true);
+            setWalletDebug(
+              `ApplePaySession=${!!APS} canMakePayments=${canMake} → ready`
+            );
           }
-        } catch {
-          /* Apple Pay unavailable here (unsupported browser or domain not yet
-             registered) — skip. */
+        } catch (apErr) {
+          /* Apple Pay unavailable here (unsupported browser, no card in Wallet,
+             seller not enabled, or domain not registered) — skip, but record
+             the precise reason for ?debug=1. */
+          if (!cancelled) {
+            const APS = (window as any).ApplePaySession;
+            const canMake =
+              APS && typeof APS.canMakePayments === "function"
+                ? APS.canMakePayments()
+                : null;
+            const msg =
+              apErr instanceof Error ? `${apErr.name}: ${apErr.message}` : String(apErr);
+            setWalletDebug(
+              `ApplePaySession=${!!APS} canMakePayments=${canMake} err=${msg}`
+            );
+          }
         }
       } catch (e) {
         if (!cancelled) {
@@ -349,7 +375,7 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
                 Receipt
               </p>
               <Row label="Tip" value={money(quote.amount)} />
-              <Row label="LoveTap service fee" value={money(quote.fee)} />
+              <Row label="Service fee" value={money(quote.fee)} />
               <Divider />
               <Row label="Total charged" value={money(quote.totalCharged)} bold />
               <p className="text-[11px] text-[#9CA3AF] mt-3 font-mono break-all">
@@ -380,7 +406,7 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
             <div className="rounded-2xl bg-[#F9FAFB] border border-[#F0F1F3] p-4">
               <Row label="Tip" value={money(quote.amount)} />
               <Row
-                label="LoveTap service fee"
+                label="Service fee"
                 value={money(quote.fee)}
               />
               <Divider />
@@ -426,6 +452,15 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
                   <div className="h-px flex-1 bg-[#EDEFF2]" />
                 </div>
               )}
+              {typeof window !== "undefined" &&
+                new URLSearchParams(window.location.search).get("debug") ===
+                  "1" && (
+                  <div className="mt-2 rounded-lg bg-[#FEF3C7] border border-[#FDE68A] p-2 text-[10px] font-mono text-[#92400E] break-all">
+                    <div>gpay: {String(googlePayReady)}</div>
+                    <div>applepay: {String(applePayReady)}</div>
+                    <div>{walletDebug || "apple pay: not evaluated yet"}</div>
+                  </div>
+                )}
             </div>
 
             <div className="mt-6">
@@ -525,7 +560,7 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
           {amount > 0 && estTotal !== null && (
             <div className="mt-4 rounded-2xl bg-[#FFF7F5] border border-[#FBE3DB] p-4">
               <Row label="Tip" value={money(amount)} />
-              <Row label="LoveTap service fee" value={money(estFee!)} />
+              <Row label="Service fee" value={money(estFee!)} />
               <Divider tone="warm" />
               <Row label="You pay" value={money(estTotal)} bold />
             </div>
