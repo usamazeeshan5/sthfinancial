@@ -427,14 +427,32 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
                 once a wallet is actually available. */}
             <div className="mt-6 space-y-2.5">
               {applePayReady && (
-                <button
-                  onClick={() => payWithWallet("apple")}
-                  disabled={busy}
-                  aria-label="Pay with Apple Pay"
-                  className="w-full h-[48px] rounded-xl bg-black text-white text-[15px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  <span style={{ fontSize: 18 }}></span> Pay
-                </button>
+                <>
+                  {/* Apple's official Apple Pay button. The `-apple-pay-button`
+                      appearance renders the branded black button with the Apple
+                      Pay mark (Safari/Apple devices only — which is exactly where
+                      applePayReady is true). */}
+                  <style>{`
+                    .lovetap-applepay {
+                      -webkit-appearance: -apple-pay-button;
+                      appearance: -apple-pay-button;
+                      -apple-pay-button-type: plain;
+                      -apple-pay-button-style: black;
+                      display: block;
+                      width: 100%;
+                      height: 48px;
+                      border-radius: 12px;
+                      cursor: pointer;
+                    }
+                    .lovetap-applepay:disabled { opacity: .5; cursor: default; }
+                  `}</style>
+                  <button
+                    onClick={() => payWithWallet("apple")}
+                    disabled={busy}
+                    aria-label="Pay with Apple Pay"
+                    className="lovetap-applepay"
+                  />
+                </>
               )}
               {/* Square renders the Google Pay button inside this container;
                   the click bridges to tokenize + charge. */}
