@@ -3,11 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 // This middleware does two jobs:
 //  1. CORS for the mobile API (/api/*) — so the web build of the mobile app
 //     (EAS Hosting on *.expo.app) can call it from the browser.
-//  2. Hostname routing for the two web faces of the single deployment:
-//       app.lovetap.me        → the public tip page (/t/<code>) only
+//  2. Hostname routing for the web faces of the single deployment:
+//       app.lovetap.me        → the worker portal + public tip page (/t/<code>)
 //       adminpanel.lovetap.me → the admin panel only
-//       lovetap.me (apex)     → unchanged; still serves everything + the API,
-//                               so existing links and the mobile app keep working.
+//       lovetap.me (apex)     → API only. Page requests redirect to the app
+//                               host; /api/* stays on the apex so the Square
+//                               webhook, OAuth callback, and mobile app (all
+//                               registered against the apex URL) keep working.
 
 // --- CORS (mobile API) ---
 const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
@@ -51,6 +53,7 @@ function handleApiCors(req: NextRequest): NextResponse {
 // --- Hostname routing (web) ---
 const APP_HOST = "app.lovetap.me";
 const ADMIN_HOST = "adminpanel.lovetap.me";
+const APEX_HOST = "lovetap.me";
 
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
@@ -64,6 +67,15 @@ export function middleware(req: NextRequest) {
   const isTip = pathname === "/t" || pathname.startsWith("/t/");
   const isPortal = pathname === "/portal" || pathname.startsWith("/portal/");
   const isWorkerFacing = isTip || isPortal; // both live on the app host
+
+  // Apex is API-only. Any page request goes to the app host, which then serves
+  // worker/tip pages itself and bounces genuine admin paths on to the admin
+  // host. (/api/* already returned above, so the back-end stays on the apex.)
+  if (host === APEX_HOST) {
+    return NextResponse.redirect(
+      new URL(`https://${APP_HOST}${pathname}${search}`)
+    );
+  }
 
   if (host === APP_HOST) {
     // The app host is the worker/customer face. Its root and login go to the
