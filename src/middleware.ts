@@ -6,10 +6,10 @@ import { NextRequest, NextResponse } from "next/server";
 //  2. Hostname routing for the web faces of the single deployment:
 //       app.lovetap.me        → the worker portal + public tip page (/t/<code>)
 //       adminpanel.lovetap.me → the admin panel only
-//       lovetap.me (apex)     → blank. Page requests return an empty page (no
-//                               site, no redirect); /api/* stays on the apex so
-//                               the Square webhook, OAuth callback, and mobile
-//                               app (registered against the apex URL) keep working.
+//       lovetap.me (apex)     → page requests redirect to the app host; /api/*
+//                               stays on the apex so the Square webhook, OAuth
+//                               callback, and mobile app (registered against the
+//                               apex URL) keep working.
 
 // --- CORS (mobile API) ---
 const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
@@ -68,14 +68,13 @@ export function middleware(req: NextRequest) {
   const isPortal = pathname === "/portal" || pathname.startsWith("/portal/");
   const isWorkerFacing = isTip || isPortal; // both live on the app host
 
-  // Apex serves no website: every page request returns a blank page. It is not
-  // redirected or branded. (/api/* already returned above, so the back-end —
-  // Square webhook, OAuth callback, mobile app — still works on the apex.)
+  // Apex forwards page requests to the app host (which serves worker/tip pages
+  // itself and bounces genuine admin paths on to the admin host). /api/* already
+  // returned above, so the back-end stays reachable on the apex.
   if (host === APEX_HOST) {
-    return new NextResponse("", {
-      status: 200,
-      headers: { "content-type": "text/html; charset=utf-8" },
-    });
+    return NextResponse.redirect(
+      new URL(`https://${APP_HOST}${pathname}${search}`)
+    );
   }
 
   if (host === APP_HOST) {
