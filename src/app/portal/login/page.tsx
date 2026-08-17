@@ -61,6 +61,11 @@ function LoginInner() {
         <form onSubmit={submit}>
           <Field label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
           <Field label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <div className="flex justify-end -mt-1 mb-3">
+            <Link href="/portal/forgot" className="text-xs font-semibold text-[#E23744]">
+              Forgot password?
+            </Link>
+          </div>
           <PrimaryButton type="submit" busy={busy} disabled={busy}>
             {busy ? "Logging in…" : "Log in"}
           </PrimaryButton>
