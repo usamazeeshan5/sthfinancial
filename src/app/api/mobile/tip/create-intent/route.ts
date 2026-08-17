@@ -6,6 +6,7 @@ import Customer from "@/lib/models/Customer";
 import FeeConfig from "@/lib/models/FeeConfig";
 import Transaction from "@/lib/models/Transaction";
 import { computeFee, computeAppFeeCents, toCents, toDollars } from "@/lib/feeMath";
+import { getLocationCapability } from "@/lib/squareCapabilities";
 
 export async function POST(req: NextRequest) {
   await connectDB();
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
   // so the tipper's WebView tokenizes against the right location, and so the
   // charge route can settle money directly into the worker's Square balance.
   const recipient = await Customer.findById(chip.customerId).select(
-    "+squareAccessToken squareLocationId bankAccountStatus"
+    "+squareAccessToken squareLocationId bankAccountStatus squareCardProcessing"
   );
   if (!recipient) {
     return NextResponse.json(
@@ -51,6 +52,34 @@ export async function POST(req: NextRequest) {
       },
       { status: 409 }
     );
+  }
+
+  // The recipient's Square location must be able to process cards — otherwise
+  // no card, Apple Pay, or Google Pay payment can succeed. New sellers only
+  // gain this after finishing Square activation. If our stored flag says they
+  // can't yet, re-check live once (so an account that just finished activating
+  // heals automatically); if it still can't, refuse with a clear message
+  // instead of loading a payment form that will fail.
+  if (!recipient.squareCardProcessing) {
+    const cap = await getLocationCapability(
+      recipient.squareAccessToken,
+      recipient.squareLocationId
+    );
+    if (cap.ok && cap.cardProcessing) {
+      recipient.squareCardProcessing = true;
+      if (cap.country) recipient.squareLocationCountry = cap.country;
+      if (cap.currency) recipient.squareLocationCurrency = cap.currency;
+      await recipient.save();
+    } else {
+      return NextResponse.json(
+        {
+          error:
+            "This recipient is still finishing their Square account setup, so they can't accept tips yet. Please ask them to complete Square activation (identity and bank details).",
+          code: "recipient_not_activated",
+        },
+        { status: 409 }
+      );
+    }
   }
 
   let feeConfig = await FeeConfig.findOne();

@@ -16,6 +16,7 @@ function HomeInner() {
   const [chips, setChips] = useState<Chip[]>([]);
   const [earnings, setEarnings] = useState<{ total: number; count: number } | null>(null);
   const [square, setSquare] = useState<string>("loading");
+  const [activationIncomplete, setActivationIncomplete] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -38,7 +39,9 @@ function HomeInner() {
       api(`/api/mobile/portal/dashboard?customerId=${meData.user.id}`),
     ]);
     setChips((await chipsRes.json()).chips || []);
-    setSquare((await sqRes.json()).status || "disconnected");
+    const sqData = await sqRes.json();
+    setSquare(sqData.status || "disconnected");
+    setActivationIncomplete(!!sqData.activationIncomplete);
     const dash = await dashRes.json().catch(() => null);
     if (dash?.stats)
       setEarnings({
@@ -56,7 +59,12 @@ function HomeInner() {
     load();
     if (params.get("claimed")) setNotice("LoveTap added to your account.");
     if (params.get("claim_error")) setError(params.get("claim_error") || "");
-    if (params.get("square") === "connected") setNotice("Square connected — you're ready to receive tips.");
+    if (params.get("square") === "connected")
+      setNotice(
+        params.get("activation") === "incomplete"
+          ? "Square connected — but finish activating your Square account (identity + bank) before you can receive tips."
+          : "Square connected — you're ready to receive tips."
+      );
     if (params.get("square") === "error")
       setError("Square couldn't be connected" + (params.get("reason") ? ` (${params.get("reason")})` : "") + ". Please try again.");
   }, [load, router, params]);
@@ -163,6 +171,20 @@ function HomeInner() {
           </div>
           {square !== "connected" && (
             <p className="text-xs text-[#6B7280] mt-2">Connect Square to start receiving tips.</p>
+          )}
+          {square === "connected" && activationIncomplete && (
+            <div className="mt-3 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] px-3.5 py-2.5">
+              <p className="text-xs font-semibold text-[#92400E]">
+                Finish activating your Square account
+              </p>
+              <p className="text-xs text-[#92400E] mt-1 leading-relaxed">
+                Your Square account is linked but not yet activated for card
+                payments. Until you complete Square&apos;s setup (identity,
+                business details, and bank), you can&apos;t receive tips and
+                Apple&nbsp;Pay / Google&nbsp;Pay won&apos;t appear. Open your
+                Square dashboard to finish, then reload this page.
+              </p>
+            </div>
           )}
         </div>
 

@@ -11,6 +11,13 @@ export interface ICustomer extends Document {
   squareRefreshToken?: string;
   squareTokenExpiresAt?: Date | null;
   squareLocationId?: string | null;
+  // Whether the connected Square location can actually take card payments.
+  // New sellers only get CREDIT_CARD_PROCESSING once they finish Square's
+  // account activation (identity/business/bank). Until then no card, Apple Pay
+  // or Google Pay works, so we must not present a broken tip page.
+  squareCardProcessing?: boolean;
+  squareLocationCountry?: string | null;
+  squareLocationCurrency?: string | null;
   active: boolean;
   createdAt: Date;
 }
@@ -31,6 +38,9 @@ const CustomerSchema = new Schema<ICustomer>(
     squareRefreshToken: { type: String, default: null, select: false },
     squareTokenExpiresAt: { type: Date, default: null },
     squareLocationId: { type: String, default: null },
+    squareCardProcessing: { type: Boolean, default: false },
+    squareLocationCountry: { type: String, default: null },
+    squareLocationCurrency: { type: String, default: null },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }

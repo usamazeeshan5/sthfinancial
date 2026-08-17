@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { connectDB } from "@/lib/db";
 import Customer from "@/lib/models/Customer";
+import { pickBestLocation } from "@/lib/squareCapabilities";
 
 // Square redirects the seller's browser here after they consent (or cancel)
 // on the OAuth authorize page. We exchange the one-time `code` for an
@@ -145,49 +146,35 @@ export async function GET(req: NextRequest) {
       token_type?: string;
     };
 
-    // Fetch the seller's main location. We need its ID to (a) initialize
-    // the Web Payments SDK in the tipper flow and (b) attribute the charge
-    // to the seller's location when calling Square Payments API.
-    let locationId: string | null = null;
-    try {
-      const locResp = await fetch(`${oauthBase}/v2/locations`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${tokenData.access_token}`,
-          "Square-Version": "2024-12-18",
-          Accept: "application/json",
-        },
-      });
-      if (locResp.ok) {
-        const locJson = (await locResp.json()) as {
-          locations?: Array<{ id: string; status?: string; type?: string }>;
-        };
-        const locations = locJson.locations || [];
-        // Prefer an active physical location; fall back to whatever's first.
-        const preferred =
-          locations.find((l) => l.status === "ACTIVE" && l.type === "PHYSICAL") ||
-          locations.find((l) => l.status === "ACTIVE") ||
-          locations[0];
-        locationId = preferred?.id || null;
-      } else {
-        console.warn("[square-connect/callback] /v2/locations failed:", locResp.status);
-      }
-    } catch (locErr) {
-      console.warn("[square-connect/callback] location fetch threw:", locErr);
-    }
+    // Fetch the seller's locations and pick the best one for taking tips —
+    // preferring an ACTIVE location that can actually process cards. We also
+    // record whether card processing is available: a brand-new seller who
+    // hasn't finished Square activation only has AUTOMATIC_TRANSFERS, which
+    // means no card / Apple Pay / Google Pay works yet.
+    const best = await pickBestLocation(tokenData.access_token);
 
     customer.squareAccessToken = tokenData.access_token;
     customer.squareRefreshToken = tokenData.refresh_token || null;
     customer.squareMerchantId = tokenData.merchant_id;
     customer.squareTokenExpiresAt = tokenData.expires_at ? new Date(tokenData.expires_at) : null;
-    customer.squareLocationId = locationId;
+    customer.squareLocationId = best.locationId;
+    customer.squareCardProcessing = best.cardProcessing;
+    customer.squareLocationCountry = best.country;
+    customer.squareLocationCurrency = best.currency;
     customer.bankAccountStatus = "connected";
     await customer.save();
 
     return finish(
       platform,
-      { connected: "true" },
-      "Bank connected. Returning to the app..."
+      {
+        connected: "true",
+        // Signal that Square is linked but not yet able to take payments, so
+        // the portal can prompt the worker to finish activation.
+        ...(best.cardProcessing ? {} : { activation: "incomplete" }),
+      },
+      best.cardProcessing
+        ? "Bank connected. Returning to the app..."
+        : "Square connected — finish activating your Square account to start receiving tips."
     );
   } catch (e: unknown) {
     console.error("[square-connect/callback] unexpected error:", e);
