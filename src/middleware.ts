@@ -6,10 +6,9 @@ import { NextRequest, NextResponse } from "next/server";
 //  2. Hostname routing for the web faces of the single deployment:
 //       app.lovetap.me        → the worker portal + public tip page (/t/<code>)
 //       adminpanel.lovetap.me → the admin panel only
-//       lovetap.me (apex)     → page requests redirect to the app host; /api/*
-//                               stays on the apex so the Square webhook, OAuth
-//                               callback, and mobile app (registered against the
-//                               apex URL) keep working.
+//       lovetap.me (apex)     → unchanged; serves everything directly (the
+//                               original behaviour) so the domain shows the site
+//                               and the API/webhook/OAuth/mobile all keep working.
 
 // --- CORS (mobile API) ---
 const ALLOWED_ORIGIN_PATTERNS: RegExp[] = [
@@ -53,7 +52,6 @@ function handleApiCors(req: NextRequest): NextResponse {
 // --- Hostname routing (web) ---
 const APP_HOST = "app.lovetap.me";
 const ADMIN_HOST = "adminpanel.lovetap.me";
-const APEX_HOST = "lovetap.me";
 
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
@@ -67,15 +65,6 @@ export function middleware(req: NextRequest) {
   const isTip = pathname === "/t" || pathname.startsWith("/t/");
   const isPortal = pathname === "/portal" || pathname.startsWith("/portal/");
   const isWorkerFacing = isTip || isPortal; // both live on the app host
-
-  // Apex forwards page requests to the app host (which serves worker/tip pages
-  // itself and bounces genuine admin paths on to the admin host). /api/* already
-  // returned above, so the back-end stays reachable on the apex.
-  if (host === APEX_HOST) {
-    return NextResponse.redirect(
-      new URL(`https://${APP_HOST}${pathname}${search}`)
-    );
-  }
 
   if (host === APP_HOST) {
     // The app host is the worker/customer face. Its root and login go to the
