@@ -2,7 +2,7 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mail, Phone, CreditCard } from "lucide-react";
+import { ArrowLeft, Mail, Phone, CreditCard, X, Trash2 } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
@@ -23,6 +23,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [codeInput, setCodeInput] = useState("");
   const [chipBusy, setChipBusy] = useState(false);
   const [chipError, setChipError] = useState("");
+
+  // Per-row busy id while a remove/delete is in flight.
+  const [removingChip, setRemovingChip] = useState<string | null>(null);
+  const [deletingTxn, setDeletingTxn] = useState<string | null>(null);
 
   const load = useCallback(() => {
     fetch(`/api/customers/${id}`)
@@ -50,6 +54,29 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     load();
   };
 
+  // Remove a chip from this account (releases the code back to the unassigned
+  // pool; the physical chip and its code are preserved and can be reassigned).
+  const removeChip = async (chipId: string, chipUid: string) => {
+    if (!confirm(`Remove ${chipUid} from ${data?.customer.name}'s account? The code will be released and can be reassigned.`)) return;
+    setRemovingChip(chipId);
+    const res = await fetch(`/api/nfc-chips/${chipId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customerId: null }),
+    });
+    setRemovingChip(null);
+    if (res.ok) load();
+  };
+
+  // Permanently delete a transaction record from this account.
+  const deleteTxn = async (txnId: string) => {
+    if (!confirm("Permanently delete this transaction? This cannot be undone.")) return;
+    setDeletingTxn(txnId);
+    const res = await fetch(`/api/transactions/${txnId}`, { method: "DELETE" });
+    setDeletingTxn(null);
+    if (res.ok) load();
+  };
+
   if (error) return <div className="flex items-center justify-center h-64"><p className="text-muted">Customer not found</p></div>;
   if (!data) return <div className="space-y-6"><div className="h-32 bg-card rounded-2xl border border-border animate-pulse" /></div>;
 
@@ -68,7 +95,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         <div className="p-4 sm:p-5 space-y-3">
           <div className="flex flex-wrap gap-3">
             {chips.length > 0
-              ? chips.map(c => <div key={c._id} className="flex items-center gap-2 px-3 py-2 bg-background rounded-xl text-sm"><span className="font-mono text-xs">{c.chipUid}</span><StatusBadge status={c.status} /></div>)
+              ? chips.map(c => <div key={c._id} className="flex items-center gap-2 px-3 py-2 bg-background rounded-xl text-sm"><span className="font-mono text-xs">{c.chipUid}</span><StatusBadge status={c.status} /><button onClick={() => removeChip(c._id, c.chipUid)} disabled={removingChip === c._id} title="Remove from account" aria-label={`Remove ${c.chipUid} from account`} className="text-muted hover:text-red-600 transition-colors disabled:opacity-40"><X className="w-3.5 h-3.5" /></button></div>)
               : <p className="text-sm text-muted italic">No chip assigned.</p>}
           </div>
           {changing && (
@@ -85,7 +112,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           )}
         </div>
       </div>
-      <div className="bg-card rounded-2xl border border-border"><div className="px-4 sm:px-5 py-4 border-b border-border"><h2 className="text-sm font-medium">Transactions ({txns.length})</h2></div><div className="hidden md:block overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-border"><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Ref</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Amount</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Fee</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Total</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Status</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Date</th></tr></thead><tbody className="divide-y divide-border">{txns.map(t => <tr key={t._id} className="hover:bg-background/50"><td className="px-5 py-3 font-mono text-xs">{t.squarePaymentId || t.quoteId || t._id}</td><td className="px-5 py-3 font-medium">{formatCurrency(t.amount)}</td><td className="px-5 py-3 text-muted">{formatCurrency(t.fee)}</td><td className="px-5 py-3">{formatCurrency(t.totalCharged)}</td><td className="px-5 py-3"><StatusBadge status={t.status} /></td><td className="px-5 py-3 text-muted">{formatDateTime(t.createdAt)}</td></tr>)}</tbody></table></div><div className="md:hidden divide-y divide-border">{txns.map(t => <div key={t._id} className="px-4 py-3 space-y-2"><div className="flex items-center justify-between"><span className="font-mono text-xs text-muted">{t.squarePaymentId || t.quoteId || t._id}</span><StatusBadge status={t.status} /></div><div className="grid grid-cols-3 gap-2 text-sm"><div><p className="text-xs text-muted">Amount</p><p className="font-medium">{formatCurrency(t.amount)}</p></div><div><p className="text-xs text-muted">Fee</p><p>{formatCurrency(t.fee)}</p></div><div><p className="text-xs text-muted">Total</p><p>{formatCurrency(t.totalCharged)}</p></div></div><p className="text-xs text-muted">{formatDateTime(t.createdAt)}</p></div>)}</div></div>
+      <div className="bg-card rounded-2xl border border-border"><div className="px-4 sm:px-5 py-4 border-b border-border"><h2 className="text-sm font-medium">Transactions ({txns.length})</h2></div><div className="hidden md:block overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-border"><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Ref</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Amount</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Fee</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Total</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Status</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Date</th><th className="px-5 py-3"></th></tr></thead><tbody className="divide-y divide-border">{txns.map(t => <tr key={t._id} className="hover:bg-background/50"><td className="px-5 py-3 font-mono text-xs">{t.squarePaymentId || t.quoteId || t._id}</td><td className="px-5 py-3 font-medium">{formatCurrency(t.amount)}</td><td className="px-5 py-3 text-muted">{formatCurrency(t.fee)}</td><td className="px-5 py-3">{formatCurrency(t.totalCharged)}</td><td className="px-5 py-3"><StatusBadge status={t.status} /></td><td className="px-5 py-3 text-muted">{formatDateTime(t.createdAt)}</td><td className="px-5 py-3 text-right"><button onClick={() => deleteTxn(t._id)} disabled={deletingTxn === t._id} title="Delete transaction" aria-label="Delete transaction" className="text-muted hover:text-red-600 transition-colors disabled:opacity-40"><Trash2 className="w-4 h-4" /></button></td></tr>)}</tbody></table></div><div className="md:hidden divide-y divide-border">{txns.map(t => <div key={t._id} className="px-4 py-3 space-y-2"><div className="flex items-center justify-between"><span className="font-mono text-xs text-muted">{t.squarePaymentId || t.quoteId || t._id}</span><StatusBadge status={t.status} /></div><div className="grid grid-cols-3 gap-2 text-sm"><div><p className="text-xs text-muted">Amount</p><p className="font-medium">{formatCurrency(t.amount)}</p></div><div><p className="text-xs text-muted">Fee</p><p>{formatCurrency(t.fee)}</p></div><div><p className="text-xs text-muted">Total</p><p>{formatCurrency(t.totalCharged)}</p></div></div><div className="flex items-center justify-between"><p className="text-xs text-muted">{formatDateTime(t.createdAt)}</p><button onClick={() => deleteTxn(t._id)} disabled={deletingTxn === t._id} aria-label="Delete transaction" className="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-red-600 disabled:opacity-40"><Trash2 className="w-3.5 h-3.5" />Delete</button></div></div>)}</div></div>
       <div className="bg-card rounded-2xl border border-border"><div className="px-4 sm:px-5 py-4 border-b border-border"><h2 className="text-sm font-medium">Payouts ({pays.length})</h2></div><div className="hidden md:block overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-border"><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Amount</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Status</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Scheduled</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Completed</th></tr></thead><tbody className="divide-y divide-border">{pays.map(p => <tr key={p._id} className="hover:bg-background/50"><td className="px-5 py-3 font-medium">{formatCurrency(p.amount)}</td><td className="px-5 py-3"><StatusBadge status={p.status} /></td><td className="px-5 py-3 text-muted">{formatDate(p.scheduledAt)}</td><td className="px-5 py-3 text-muted">{p.completedAt ? formatDateTime(p.completedAt) : "—"}</td></tr>)}</tbody></table></div><div className="md:hidden divide-y divide-border">{pays.map(p => <div key={p._id} className="px-4 py-3 space-y-1"><div className="flex items-center justify-between"><span className="font-medium text-sm">{formatCurrency(p.amount)}</span><StatusBadge status={p.status} /></div><div className="flex items-center justify-between text-xs text-muted"><span>Scheduled: {formatDate(p.scheduledAt)}</span><span>{p.completedAt ? formatDateTime(p.completedAt) : "Pending"}</span></div></div>)}</div></div>
     </div>
   );
