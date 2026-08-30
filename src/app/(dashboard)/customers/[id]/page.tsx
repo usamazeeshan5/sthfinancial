@@ -2,12 +2,13 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Mail, Phone, CreditCard, X, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail, Phone, CreditCard, X, Trash2, Share2, ExternalLink } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
+import { SOCIAL_PLATFORMS, socialUrl } from "@/lib/socials";
 
 type CustomerData = {
-  customer: { _id: string; name: string; email: string; phone: string; bankAccountStatus: string; active: boolean; createdAt: string };
+  customer: { _id: string; name: string; email: string; phone: string; bankAccountStatus: string; active: boolean; createdAt: string; socials?: { tiktok?: string; instagram?: string; facebook?: string; onlyfans?: string } };
   transactions: Array<{ _id: string; squarePaymentId?: string; quoteId?: string; amount: number; fee: number; totalCharged: number; status: string; createdAt: string }>;
   payouts: Array<{ _id: string; amount: number; status: string; scheduledAt: string; completedAt: string | null }>;
   nfcChips: Array<{ _id: string; chipUid: string; status: string }>;
@@ -115,6 +116,31 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               <p className="text-xs text-muted">The current chip is released and the new code is linked. Generate codes on the NFC Chips page first.</p>
             </div>
           )}
+        </div>
+      </div>
+      <div className="bg-card rounded-2xl border border-border">
+        <div className="px-4 sm:px-5 py-4 border-b border-border flex items-center gap-2">
+          <Share2 className="w-4 h-4 text-muted" />
+          <h2 className="text-sm font-medium">Social links</h2>
+        </div>
+        <div className="p-4 sm:p-5">
+          {(() => {
+            const links = SOCIAL_PLATFORMS
+              .map((p) => ({ key: p.key, label: p.label, url: socialUrl(p.key, customer.socials?.[p.key]) }))
+              .filter((l) => l.url);
+            if (!links.length)
+              return <p className="text-sm text-muted italic">None added yet — the worker adds these in their profile.</p>;
+            return (
+              <div className="flex flex-wrap gap-2">
+                {links.map((l) => (
+                  <a key={l.key} href={l.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-2 bg-background rounded-xl text-sm hover:text-accent transition-colors">
+                    <span className="font-medium">{l.label}</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-muted" />
+                  </a>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       </div>
       <div className="bg-card rounded-2xl border border-border"><div className="px-4 sm:px-5 py-4 border-b border-border"><h2 className="text-sm font-medium">Transactions ({txns.length})</h2></div><div className="hidden md:block overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-border"><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Ref</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Amount</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Fee</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Total</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Status</th><th className="text-left px-5 py-3 text-xs font-medium text-muted uppercase tracking-wider">Date</th><th className="px-5 py-3"></th></tr></thead><tbody className="divide-y divide-border">{txns.map(t => <tr key={t._id} className="hover:bg-background/50"><td className="px-5 py-3 font-mono text-xs">{t.squarePaymentId || t.quoteId || t._id}</td><td className="px-5 py-3 font-medium">{formatCurrency(t.amount)}</td><td className="px-5 py-3 text-muted">{formatCurrency(t.fee)}</td><td className="px-5 py-3">{formatCurrency(t.totalCharged)}</td><td className="px-5 py-3"><StatusBadge status={t.status} /></td><td className="px-5 py-3 text-muted">{formatDateTime(t.createdAt)}</td><td className="px-5 py-3 text-right"><button onClick={() => deleteTxn(t._id)} disabled={deletingTxn === t._id} title="Delete transaction" aria-label="Delete transaction" className="text-muted hover:text-red-600 transition-colors disabled:opacity-40"><Trash2 className="w-4 h-4" /></button></td></tr>)}</tbody></table></div><div className="md:hidden divide-y divide-border">{txns.map(t => <div key={t._id} className="px-4 py-3 space-y-2"><div className="flex items-center justify-between"><span className="font-mono text-xs text-muted">{t.squarePaymentId || t.quoteId || t._id}</span><StatusBadge status={t.status} /></div><div className="grid grid-cols-3 gap-2 text-sm"><div><p className="text-xs text-muted">Amount</p><p className="font-medium">{formatCurrency(t.amount)}</p></div><div><p className="text-xs text-muted">Fee</p><p>{formatCurrency(t.fee)}</p></div><div><p className="text-xs text-muted">Total</p><p>{formatCurrency(t.totalCharged)}</p></div></div><div className="flex items-center justify-between"><p className="text-xs text-muted">{formatDateTime(t.createdAt)}</p><button onClick={() => deleteTxn(t._id)} disabled={deletingTxn === t._id} aria-label="Delete transaction" className="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-red-600 disabled:opacity-40"><Trash2 className="w-3.5 h-3.5" />Delete</button></div></div>)}</div></div>
