@@ -26,6 +26,12 @@ export async function GET(req: NextRequest) {
       name: customer.name,
       email: customer.email,
       phone: customer.phone,
+      socials: {
+        tiktok: customer.socials?.tiktok || "",
+        instagram: customer.socials?.instagram || "",
+        facebook: customer.socials?.facebook || "",
+        onlyfans: customer.socials?.onlyfans || "",
+      },
     },
   });
 }

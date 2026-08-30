@@ -18,6 +18,14 @@ export interface ICustomer extends Document {
   squareCardProcessing?: boolean;
   squareLocationCountry?: string | null;
   squareLocationCurrency?: string | null;
+  // Optional social handles/URLs the worker can share on their tip receipt so
+  // tippers can follow them. Any combination may be set.
+  socials?: {
+    tiktok?: string;
+    instagram?: string;
+    facebook?: string;
+    onlyfans?: string;
+  };
   active: boolean;
   createdAt: Date;
 }
@@ -41,6 +49,12 @@ const CustomerSchema = new Schema<ICustomer>(
     squareCardProcessing: { type: Boolean, default: false },
     squareLocationCountry: { type: String, default: null },
     squareLocationCurrency: { type: String, default: null },
+    socials: {
+      tiktok: { type: String, default: "" },
+      instagram: { type: String, default: "" },
+      facebook: { type: String, default: "" },
+      onlyfans: { type: String, default: "" },
+    },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }

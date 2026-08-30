@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SOCIAL_PLATFORMS, socialUrl } from "@/lib/socials";
 
 // Web version of the mobile tipper flow: pick amount -> review fee -> card ->
 // result. Reuses the same backend the app does (/api/mobile/tip/*), so quotes,
@@ -16,6 +17,12 @@ interface Quote {
   percentageFee: number;
   flatFee: number;
   customerName: string;
+  socials?: {
+    tiktok?: string;
+    instagram?: string;
+    facebook?: string;
+    onlyfans?: string;
+  };
   square: {
     applicationId: string | null;
     locationId: string | null;
@@ -370,6 +377,8 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
               tip is on its way to {quote.customerName}.
             </p>
 
+            <FollowLinks name={quote.customerName} socials={quote.socials} />
+
             <div className="mt-7 rounded-2xl bg-[#F9FAFB] border border-[#F0F1F3] p-4 text-left">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-[#C4C8CE] mb-2">
                 Receipt
@@ -712,6 +721,53 @@ function Row({
       >
         {value}
       </span>
+    </div>
+  );
+}
+
+const SOCIAL_BRAND: Record<string, string> = {
+  tiktok: "#000000",
+  instagram: "#E1306C",
+  facebook: "#1877F2",
+  onlyfans: "#00AFF0",
+};
+
+// Follow buttons shown on the success screen for whichever platforms the
+// recipient added to their profile. Renders nothing if they set none.
+function FollowLinks({
+  name,
+  socials,
+}: {
+  name: string;
+  socials?: { tiktok?: string; instagram?: string; facebook?: string; onlyfans?: string };
+}) {
+  if (!socials) return null;
+  const links = SOCIAL_PLATFORMS.map((p) => ({
+    key: p.key,
+    label: p.label,
+    url: socialUrl(p.key, socials[p.key]),
+  })).filter((l) => l.url);
+  if (!links.length) return null;
+
+  const firstName = name.trim().split(/\s+/)[0] || name;
+
+  return (
+    <div className="mt-7">
+      <p className="text-[13px] font-bold text-[#111827]">Follow {firstName}</p>
+      <div className="mt-2.5 grid grid-cols-2 gap-2">
+        {links.map((l) => (
+          <a
+            key={l.key}
+            href={l.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-[44px] rounded-xl flex items-center justify-center text-white text-[13px] font-semibold active:scale-[0.98] transition-transform"
+            style={{ backgroundColor: SOCIAL_BRAND[l.key] }}
+          >
+            {l.label}
+          </a>
+        ))}
+      </div>
     </div>
   );
 }

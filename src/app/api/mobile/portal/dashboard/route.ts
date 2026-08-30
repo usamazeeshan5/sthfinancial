@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/lib/models/Transaction";
 import Payout from "@/lib/models/Payout";
+import { COMPLETED_STATUSES, EARNING_STATUSES, HIDDEN_STATUSES } from "@/lib/txnStatus";
 
 export async function GET(req: NextRequest) {
   await connectDB();
@@ -41,12 +42,13 @@ export async function GET(req: NextRequest) {
         { $match: { customerId: customerObjectId, status: "scheduled" } },
         { $group: { _id: null, sum: { $sum: "$amount" } } },
       ]),
-      Transaction.countDocuments({ customerId: customerObjectId }),
-      Transaction.find({ customerId: customerObjectId }).sort({ createdAt: -1 }).limit(10),
+      Transaction.countDocuments({ customerId: customerObjectId, status: { $in: COMPLETED_STATUSES } }),
+      Transaction.find({ customerId: customerObjectId, status: { $nin: HIDDEN_STATUSES } }).sort({ createdAt: -1 }).limit(10),
       Transaction.aggregate([
         {
           $match: {
             customerId: customerObjectId,
+            status: { $in: EARNING_STATUSES },
             createdAt: { $gte: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000) },
           },
         },

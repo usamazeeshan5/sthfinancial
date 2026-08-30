@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   // so the tipper's WebView tokenizes against the right location, and so the
   // charge route can settle money directly into the worker's Square balance.
   const recipient = await Customer.findById(chip.customerId).select(
-    "+squareAccessToken squareLocationId bankAccountStatus squareCardProcessing"
+    "+squareAccessToken squareLocationId bankAccountStatus squareCardProcessing socials"
   );
   if (!recipient) {
     return NextResponse.json(
@@ -134,6 +134,14 @@ export async function POST(req: NextRequest) {
     percentageFee: feeConfig.percentageFee,
     flatFee: feeConfig.flatFee,
     customerName: chip.customerName,
+    // Only the platforms the worker actually filled in, so the success screen
+    // can render follow links.
+    socials: {
+      tiktok: recipient.socials?.tiktok || "",
+      instagram: recipient.socials?.instagram || "",
+      facebook: recipient.socials?.facebook || "",
+      onlyfans: recipient.socials?.onlyfans || "",
+    },
     square: {
       applicationId: squareApplicationId,
       locationId: recipient.squareLocationId,

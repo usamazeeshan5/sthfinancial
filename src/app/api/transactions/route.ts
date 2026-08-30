@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/lib/models/Transaction";
+import { HIDDEN_STATUSES } from "@/lib/txnStatus";
 
 export async function GET(req: NextRequest) {
   await connectDB();
@@ -11,7 +12,10 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "20");
 
   const query: Record<string, unknown> = {};
+  // A specific status filter is honored as-is; otherwise hide quotes/failed
+  // attempts so the log shows only real, completed transactions.
   if (status && status !== "all") query.status = status;
+  else query.status = { $nin: HIDDEN_STATUSES };
   if (search) {
     const rx = { $regex: search, $options: "i" };
     query.$or = [

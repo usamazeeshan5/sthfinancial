@@ -81,7 +81,12 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   if (!data) return <div className="space-y-6"><div className="h-32 bg-card rounded-2xl border border-border animate-pulse" /></div>;
 
   const { customer, transactions: txns, payouts: pays, nfcChips: chips } = data;
-  const totalEarnings = txns.reduce((s, t) => s + t.amount, 0);
+  // Only successful (non-reversed) tips count as earnings; refunded/disputed
+  // still appear in the list but don't inflate the total.
+  const totalEarnings = txns.reduce(
+    (s, t) => s + (["processed", "deposited"].includes(t.status) ? t.amount : 0),
+    0
+  );
 
   return (
     <div className="space-y-6">

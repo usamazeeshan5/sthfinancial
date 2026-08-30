@@ -21,7 +21,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { name, email, phone } = await req.json();
+  const { name, email, phone, socials } = await req.json();
 
   if (!name || !email || !phone) {
     return NextResponse.json({ error: "All fields are required" }, { status: 400 });
@@ -33,9 +33,21 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Email already in use" }, { status: 400 });
   }
 
+  const update: Record<string, unknown> = { name, email, phone };
+  // Social handles are optional; only touch them when provided, and keep only
+  // the four supported platforms as trimmed strings.
+  if (socials && typeof socials === "object") {
+    update.socials = {
+      tiktok: String(socials.tiktok || "").trim(),
+      instagram: String(socials.instagram || "").trim(),
+      facebook: String(socials.facebook || "").trim(),
+      onlyfans: String(socials.onlyfans || "").trim(),
+    };
+  }
+
   const customer = await Customer.findByIdAndUpdate(
     customerId,
-    { name, email, phone },
+    update,
     { new: true }
   ).select("-password");
 

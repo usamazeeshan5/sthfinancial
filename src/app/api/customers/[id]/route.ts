@@ -4,6 +4,7 @@ import Customer from "@/lib/models/Customer";
 import Transaction from "@/lib/models/Transaction";
 import Payout from "@/lib/models/Payout";
 import NfcChip from "@/lib/models/NfcChip";
+import { HIDDEN_STATUSES } from "@/lib/txnStatus";
 
 export async function GET(
   req: NextRequest,
@@ -17,7 +18,7 @@ export async function GET(
   }
 
   const [transactions, payouts, nfcChips] = await Promise.all([
-    Transaction.find({ customerId: id }).sort({ createdAt: -1 }),
+    Transaction.find({ customerId: id, status: { $nin: HIDDEN_STATUSES } }).sort({ createdAt: -1 }),
     Payout.find({ customerId: id }).sort({ scheduledAt: -1 }),
     NfcChip.find({ customerId: id }),
   ]);

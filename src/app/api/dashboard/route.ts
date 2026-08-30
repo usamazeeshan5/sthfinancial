@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Customer from "@/lib/models/Customer";
 import Transaction from "@/lib/models/Transaction";
 import Payout from "@/lib/models/Payout";
+import { COMPLETED_STATUSES, EARNING_STATUSES } from "@/lib/txnStatus";
 
 export async function GET(req: NextRequest) {
   await connectDB();
@@ -19,9 +20,17 @@ export async function GET(req: NextRequest) {
     recentTransactions,
     chartData,
   ] = await Promise.all([
-    Transaction.aggregate([{ $group: { _id: null, sum: { $sum: "$amount" } } }]),
-    Transaction.aggregate([{ $group: { _id: null, sum: { $sum: "$fee" } } }]),
-    Transaction.countDocuments(),
+    // Tips/fees sum only successful money — NOT abandoned quotes.
+    Transaction.aggregate([
+      { $match: { status: { $in: EARNING_STATUSES } } },
+      { $group: { _id: null, sum: { $sum: "$amount" } } },
+    ]),
+    Transaction.aggregate([
+      { $match: { status: { $in: EARNING_STATUSES } } },
+      { $group: { _id: null, sum: { $sum: "$fee" } } },
+    ]),
+    // Count real transactions, not quotes.
+    Transaction.countDocuments({ status: { $in: COMPLETED_STATUSES } }),
     Customer.countDocuments({ active: true }),
     Transaction.aggregate([
       { $match: { status: "deposited" } },
@@ -31,11 +40,14 @@ export async function GET(req: NextRequest) {
       { $match: { status: "scheduled" } },
       { $group: { _id: null, sum: { $sum: "$amount" } } },
     ]),
-    Transaction.find().sort({ createdAt: -1 }).limit(5),
-    // Chart: aggregate tips per day for the last N days
+    Transaction.find({ status: { $in: COMPLETED_STATUSES } })
+      .sort({ createdAt: -1 })
+      .limit(5),
+    // Chart: aggregate paid tips per day for the last N days.
     Transaction.aggregate([
       {
         $match: {
+          status: { $in: EARNING_STATUSES },
           createdAt: {
             $gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000),
           },

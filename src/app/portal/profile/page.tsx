@@ -4,6 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getToken, setToken, clearToken, api } from "../auth";
 import { Card, Field, PrimaryButton, ErrorBox, Footer, Nav } from "../ui";
+import { SOCIAL_PLATFORMS } from "@/lib/socials";
+
+type Socials = { tiktok: string; instagram: string; facebook: string; onlyfans: string };
+const EMPTY_SOCIALS: Socials = { tiktok: "", instagram: "", facebook: "", onlyfans: "" };
 
 export default function PortalProfile() {
   const router = useRouter();
@@ -13,6 +17,7 @@ export default function PortalProfile() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [socials, setSocials] = useState<Socials>(EMPTY_SOCIALS);
   const [savedMsg, setSavedMsg] = useState("");
   const [error, setError] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -35,6 +40,7 @@ export default function PortalProfile() {
     setName(me.name || "");
     setEmail(me.email || "");
     setPhone(me.phone || "");
+    setSocials({ ...EMPTY_SOCIALS, ...(me.socials || {}) });
     const sq = await api("/api/mobile/portal/square-connect/status");
     setSquare((await sq.json()).status || "disconnected");
     setLoading(false);
@@ -55,7 +61,7 @@ export default function PortalProfile() {
     setSavingProfile(true);
     const res = await api("/api/mobile/portal/profile", {
       method: "PATCH",
-      body: JSON.stringify({ name, email, phone }),
+      body: JSON.stringify({ name, email, phone, socials }),
     });
     const data = await res.json();
     setSavingProfile(false);
@@ -126,6 +132,23 @@ export default function PortalProfile() {
           <Field label="Full name" value={name} onChange={(e) => setName(e.target.value)} required />
           <Field label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <Field label="Mobile number" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+
+          <div className="mt-4 pt-4 border-t border-[#F0F1F3]">
+            <p className="text-sm font-bold text-[#111827]">Social links</p>
+            <p className="text-xs text-[#6B7280] mt-0.5 mb-3">
+              Shown to tippers after they pay, so they can follow you. Add any you like — leave the rest blank.
+            </p>
+            {SOCIAL_PLATFORMS.map((p) => (
+              <Field
+                key={p.key}
+                label={p.label}
+                placeholder={p.placeholder}
+                value={socials[p.key]}
+                onChange={(e) => setSocials((s) => ({ ...s, [p.key]: e.target.value }))}
+              />
+            ))}
+          </div>
+
           <PrimaryButton type="submit" busy={savingProfile} disabled={savingProfile}>
             Save changes
           </PrimaryButton>
