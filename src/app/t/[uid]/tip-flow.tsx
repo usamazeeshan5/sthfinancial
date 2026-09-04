@@ -790,7 +790,8 @@ function FollowLinks({
             style={{ backgroundColor: SOCIAL_BRAND[l.key] }}
           >
             <SocialIcon platform={l.key} />
-            {l.label}
+            {/* X's logo already reads as the name, so skip the redundant label. */}
+            {l.key !== "x" && l.label}
           </a>
         ))}
       </div>
