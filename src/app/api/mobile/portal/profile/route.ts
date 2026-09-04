@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest) {
       tiktok: String(socials.tiktok || "").trim(),
       instagram: String(socials.instagram || "").trim(),
       facebook: String(socials.facebook || "").trim(),
-      onlyfans: String(socials.onlyfans || "").trim(),
+      x: String(socials.x || "").trim(),
     };
   }
 

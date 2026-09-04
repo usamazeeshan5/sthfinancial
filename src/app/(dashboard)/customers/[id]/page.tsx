@@ -8,7 +8,7 @@ import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 import { SOCIAL_PLATFORMS, socialUrl } from "@/lib/socials";
 
 type CustomerData = {
-  customer: { _id: string; name: string; email: string; phone: string; bankAccountStatus: string; active: boolean; createdAt: string; socials?: { tiktok?: string; instagram?: string; facebook?: string; onlyfans?: string } };
+  customer: { _id: string; name: string; email: string; phone: string; bankAccountStatus: string; active: boolean; createdAt: string; socials?: { tiktok?: string; instagram?: string; facebook?: string; x?: string } };
   transactions: Array<{ _id: string; squarePaymentId?: string; quoteId?: string; amount: number; fee: number; totalCharged: number; status: string; createdAt: string }>;
   payouts: Array<{ _id: string; amount: number; status: string; scheduledAt: string; completedAt: string | null }>;
   nfcChips: Array<{ _id: string; chipUid: string; status: string }>;

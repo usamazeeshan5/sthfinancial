@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
       tiktok: recipient.socials?.tiktok || "",
       instagram: recipient.socials?.instagram || "",
       facebook: recipient.socials?.facebook || "",
-      onlyfans: recipient.socials?.onlyfans || "",
+      x: recipient.socials?.x || "",
     },
     square: {
       applicationId: squareApplicationId,

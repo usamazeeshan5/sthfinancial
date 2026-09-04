@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
         tiktok: customer.socials?.tiktok || "",
         instagram: customer.socials?.instagram || "",
         facebook: customer.socials?.facebook || "",
-        onlyfans: customer.socials?.onlyfans || "",
+        x: customer.socials?.x || "",
       },
     },
   });

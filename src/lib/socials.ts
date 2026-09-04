@@ -1,6 +1,6 @@
 // Social platforms a worker can share on their tip receipt.
 
-export type SocialPlatform = "tiktok" | "instagram" | "facebook" | "onlyfans";
+export type SocialPlatform = "tiktok" | "instagram" | "facebook" | "x";
 
 export const SOCIAL_PLATFORMS: {
   key: SocialPlatform;
@@ -11,7 +11,7 @@ export const SOCIAL_PLATFORMS: {
   { key: "tiktok", label: "TikTok", base: "https://www.tiktok.com/@", placeholder: "@username" },
   { key: "instagram", label: "Instagram", base: "https://www.instagram.com/", placeholder: "@username" },
   { key: "facebook", label: "Facebook", base: "https://www.facebook.com/", placeholder: "username or page" },
-  { key: "onlyfans", label: "OnlyFans", base: "https://onlyfans.com/", placeholder: "username" },
+  { key: "x", label: "X", base: "https://x.com/", placeholder: "@username" },
 ];
 
 // Turn a stored handle or full URL into an https link. Accepts either

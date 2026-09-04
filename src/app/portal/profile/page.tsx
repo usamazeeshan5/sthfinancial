@@ -6,8 +6,8 @@ import { getToken, setToken, clearToken, api } from "../auth";
 import { Card, Field, PrimaryButton, ErrorBox, Footer, Nav } from "../ui";
 import { SOCIAL_PLATFORMS } from "@/lib/socials";
 
-type Socials = { tiktok: string; instagram: string; facebook: string; onlyfans: string };
-const EMPTY_SOCIALS: Socials = { tiktok: "", instagram: "", facebook: "", onlyfans: "" };
+type Socials = { tiktok: string; instagram: string; facebook: string; x: string };
+const EMPTY_SOCIALS: Socials = { tiktok: "", instagram: "", facebook: "", x: "" };
 
 export default function PortalProfile() {
   const router = useRouter();

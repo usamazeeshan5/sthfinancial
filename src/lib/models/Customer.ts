@@ -24,7 +24,7 @@ export interface ICustomer extends Document {
     tiktok?: string;
     instagram?: string;
     facebook?: string;
-    onlyfans?: string;
+    x?: string;
   };
   active: boolean;
   createdAt: Date;
@@ -53,7 +53,7 @@ const CustomerSchema = new Schema<ICustomer>(
       tiktok: { type: String, default: "" },
       instagram: { type: String, default: "" },
       facebook: { type: String, default: "" },
-      onlyfans: { type: String, default: "" },
+      x: { type: String, default: "" },
     },
     active: { type: Boolean, default: true },
   },
