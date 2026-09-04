@@ -377,7 +377,7 @@ export default function TipFlow({ chipUid, recipientName }: Props) {
               tip is on its way to {quote.customerName}.
             </p>
 
-            <FollowLinks name={quote.customerName} socials={quote.socials} />
+            <FollowLinks socials={quote.socials} />
 
             <div className="mt-7 rounded-2xl bg-[#F9FAFB] border border-[#F0F1F3] p-4 text-left">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-[#C4C8CE] mb-2">
@@ -765,10 +765,8 @@ function SocialIcon({ platform }: { platform: string }) {
 // Follow buttons shown on the success screen for whichever platforms the
 // recipient added to their profile. Renders nothing if they set none.
 function FollowLinks({
-  name,
   socials,
 }: {
-  name: string;
   socials?: { tiktok?: string; instagram?: string; facebook?: string; onlyfans?: string };
 }) {
   if (!socials) return null;
@@ -779,11 +777,9 @@ function FollowLinks({
   })).filter((l) => l.url);
   if (!links.length) return null;
 
-  const firstName = name.trim().split(/\s+/)[0] || name;
-
   return (
     <div className="mt-7">
-      <p className="text-[13px] font-bold text-[#111827]">Follow {firstName}</p>
+      <p className="text-[13px] font-bold text-[#111827]">Follow me on…</p>
       <div className="mt-2.5 grid grid-cols-2 gap-2">
         {links.map((l) => (
           <a
